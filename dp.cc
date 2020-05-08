@@ -52,12 +52,11 @@ int tspSolver() {
     rep(i,n) {
       if(i==k) continue;
       int b = dp[i][s^(1<<k)];
-      if(b+dist(i,k)==a) {
-        next[k]=i;
-        s = s^(1<<k);
-        k=i;
-        break;
-      }
+      if(b+dist(i,k)!=a) continue;
+      next[k]=i;
+      s = s^(1<<k);
+      k=i;
+      break;
     }
   }
   next[k]=n-1;
