@@ -4,12 +4,19 @@
     {
       "label": "build",
       "type": "shell",
-      "command": "g++ -O2 -I/usr/include/X11/ -L/usr/lib/ -lX11 -lm tspShow.c ${relativeFile} ",
+      "command": "g++ -O2 -I/usr/include/X11/ -L/usr/lib/ -lX11 -lm tspShow.c ${relativeFile} -o ${fileBasenameNoExtension}.out",
       "isBackground": true,
       "group": {
         "kind": "build",
         "isDefault": true
       }
+    },
+    {
+      "label": "svg",
+      "type": "shell",
+      "command": "./${fileBasenameNoExtension}.out -n -c testDataTsp | ./export.out > ${fileBasenameNoExtension}.svg",
+      "isBackground": true,
+      "problemMatcher": []
     }
   ]
 }
