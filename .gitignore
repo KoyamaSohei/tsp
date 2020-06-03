@@ -3,4 +3,3 @@ enumTsp.c
 tspShow.c
 testDataTsp
 lib
-*.svg
