@@ -55,30 +55,12 @@ class UnionFind {
     }
 };
 
-// http://xoshiro.di.unimi.it/xoshiro256starstar.c
-
-static inline uint64_t rotl(const uint64_t x, int k) {
-	return (x << k) | (x >> (64 - k));
+int xor64(void) {
+  static uint64_t x = 88172645463325252ULL;
+  x = x ^ (x << 13); x = x ^ (x >> 7);
+  return x = x ^ (x << 17);
 }
 
-static uint64_t s[4];
-
-uint64_t next(void) {
-	const uint64_t result = rotl(s[1] * 5, 7) * 9;
-
-	const uint64_t t = s[1] << 17;
-
-	s[2] ^= s[0];
-	s[3] ^= s[1];
-	s[1] ^= s[2];
-	s[0] ^= s[3];
-
-	s[2] ^= t;
-
-	s[3] = rotl(s[3], 45);
-
-	return result;
-}
 
 int dist(int i, int j) {
   float xd = city[i][0] - city[j][0];
