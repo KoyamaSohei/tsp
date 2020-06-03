@@ -36,5 +36,11 @@ int main() {
     double y2=pos[(i+1)%N].second;
     printf("  <line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" stroke=\"black\" />\n",x1,y1,x2,y2);
   }
+  double r = min(xmax-xmin,ymax-ymin)/100;
+  rep(i,N) {
+    double x1=pos[i].first;
+    double y1=pos[i].second;
+    printf("<circle cx=\"%f\" cy=\"%f\" r=\"%f\"/>\n",x1,y1,r);
+  }
   printf("</svg>\n");
 }
