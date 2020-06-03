@@ -90,24 +90,12 @@ int main(int argc,char *argv[]) {
     exit(1);
   }
   cout << dim << endl;
-  int score = 0;
-  vi tx(dim),ty(dim);
-  int id=0;
   while(fgets(buf,1024,fp) != NULL) {
     if(strncmp("-1", buf, 2)==0) break;
     char *p = buf;
     int k = strtol(p,&p,10);
     printf("%d %d\n",xs[k-1],ys[k-1]);
-    tx[id] = xs[k-1];
-    ty[id] = ys[k-1];
-    id++;
   }
   fclose(fp);
-  rep(i,dim) {
-    int xd = tx[i]-tx[(i+1)%dim];
-    int yd = ty[i]-ty[(i+1)%dim];
-    score += (int)(sqrt(xd * xd + yd * yd) + .5);
-  }
-  printf("length = %d\n",score);
   return 0;
 }
