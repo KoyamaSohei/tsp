@@ -136,18 +136,17 @@ void build() {
   }
 }
 
+// before: a -> b,c -> d
+//  after: a -> c,b -> d
+// => reverse b ... c
 void flip(int ai,int bi,int ci,int di) {
-  vi arr;
-  int p=bi;
-  while(p!=di) {
-    arr.push_back(tour[p]);
-    p++;
-    p%=n;
+  stack<int> st;
+  for(int p=bi;p!=di;p=(p+1)%n) {
+    st.push(tour[p]);
   }
-  reverse(rng(arr));
-  p=bi;
-  rep(i,sz(arr)) {
-    tour[(bi+i)%n]=arr[i];
+  for(int p=bi;p!=di;p=(p+1)%n) {
+    tour[p]=st.top();
+    st.pop();
   }
 }
 
@@ -155,16 +154,14 @@ void twoopt() {
   rep(i,n) {
     int a = tour[i];
     int b = tour[(i+1)%n];
-    int k = neighbor10[a][(next())%sz(neighbor10[a])];
+    int k = neighbor10[a][abs(xor64())%sz(neighbor10[a])];
     int c = tour[k];
     if(b==c) continue;
     int d = tour[(k+1)%n];
     if(b==d||a==d) continue;
     int tmp = dist(a,b)+dist(c,d)-dist(a,c)-dist(b,d);
     if(tmp>0) {
-      show(i);
-      show(k);
-      flip(i,(i+1),k,(k+1)%n);
+      flip(i,(i+1)%n,k,(k+1)%n);
       length-=tmp;
       return;
     }
