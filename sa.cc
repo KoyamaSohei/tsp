@@ -94,6 +94,7 @@ vi neighbor10[MAX];
 int bestlen = INF;
 vi bestlog;
 clock_t startt,endt;
+double temperature = 200.0;
 
 // TODO: そこそこ良い構築をする
 void build() {
@@ -174,12 +175,12 @@ void snapshot() {
 
 bool moveNext(int tmp) {
   clock_t now = clock();
-  double x = 0.0001*exp(10.0*(endt - now)/(endt-startt));
-  int f = randxor()%200000;
-  int res = 200000+tmp*x-f;
-  // show(res);
-  return res<0;
+  double x = double(randxor()%10000)/10000;
+  double y = exp(double(tmp)/temperature);
+  return x<y;
 }
+
+int cnt = 0;
 
 void sa() {
   int x = randxor()%n;
@@ -194,9 +195,13 @@ void sa() {
   if(tmp>0) {
     flip(x,(x+1)%n,k,(k+1)%n);
     length-=tmp;
+    cnt--;
     return;
   }
-  if(!moveNext(tmp)) return;
+  cnt++;
+  if(!moveNext(tmp)) {
+    return;
+  }
   flip(x,(x+1)%n,k,(k+1)%n);
   length-=tmp;
 }
@@ -206,6 +211,10 @@ int tspSolver() {
   while(clock() < endt) {
     sa();
     snapshot();
+    if(cnt>CLOCKS_PER_SEC*0.002) {
+      temperature *= 0.8;
+      cnt = 0;
+    }
   }
   length = bestlen;
   rep(i,n) {
