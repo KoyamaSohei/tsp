@@ -94,7 +94,7 @@ vi neighbor10[MAX];
 int bestlen = INF;
 vi bestlog;
 clock_t startt,endt;
-double temperature = 200.0;
+double temperature = 50.0;
 
 // TODO: そこそこ良い構築をする
 void build() {
@@ -211,8 +211,8 @@ int tspSolver() {
   while(clock() < endt) {
     sa();
     snapshot();
-    if(cnt>CLOCKS_PER_SEC*0.002) {
-      temperature *= 0.8;
+    if(cnt>CLOCKS_PER_SEC*0.0001) {
+      temperature *= 0.4;
       cnt = 0;
     }
   }
