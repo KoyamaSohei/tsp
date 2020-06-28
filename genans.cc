@@ -9,6 +9,7 @@
 #define chmin(x,y) x=min(x,y)
 #define chmax(x,y) x=max(x,y)
 using namespace std;
+typedef vector<double> vd;
 typedef vector<int> vi;
 typedef vector<vi> vvi;
 const int INF = 1001001001;
@@ -21,7 +22,7 @@ int main(int argc,char *argv[]) {
   FILE *fp;
   char buf[1024];
   int dim;
-  vi xs,ys;
+  vd xs,ys;
   {
     // read data from %s.tsp
     char tsp[100];
@@ -45,8 +46,8 @@ int main(int argc,char *argv[]) {
       if(strncmp("EOF", buf, 3)==0) break;
       char *p = buf;
       int k = strtol(p,&p,10);
-      int x = strtol(p,&p,10);
-      int y = strtol(p,&p,10);
+      double x = strtod(p,&p);
+      double y = strtod(p,&p);
       xs[k-1]=x;
       ys[k-1]=y;
     }
@@ -86,7 +87,7 @@ int main(int argc,char *argv[]) {
     if(strncmp("-1", buf, 2)==0) break;
     char *p = buf;
     int k = strtol(p,&p,10);
-    printf("%d %d\n",xs[k-1],ys[k-1]);
+    printf("%f %f\n",xs[k-1],ys[k-1]);
   }
   fclose(fp);
   return 0;
