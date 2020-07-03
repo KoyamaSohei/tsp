@@ -35,31 +35,160 @@ extern void showCTour(int *tou, int wai, int *color);
 extern void showString(char *str);
 extern void showLength(int leng);
 
-class UnionFind {
-  public:
-    vi Parent;
-    UnionFind(int N) {
-      Parent = vi(N,-1);
+struct RMQ {
+  int N;
+  vi segtree;
+  RMQ() {
+    N = 1;
+    int len = 1;
+    while(N < n) {
+      N *= 2;
+      len += N;
     }
-  
-    int root(int A) {
-      if(Parent[A] < 0) return A;
-      return Parent[A] = root(Parent[A]);
+    segtree = vi(len,INF);
+  }
+  void build(int idx,int val) {
+    int s = sz(segtree) - (N-idx);
+    segtree[s] = val;
+    while(1) {
+      if(s == 0) break;
+      s = (s-1)/2;
+      segtree[s] = min(segtree[s*2+1],segtree[s*2+2]);
     }
-  
-    int size(int A) {
-      return -Parent[root(A)];
+  }
+  void inc(int idx) {
+    int s = sz(segtree) - (N-idx);
+    segtree[s]++;
+    while(1) {
+      if(s == 0) break;
+      s = (s-1)/2;
+      segtree[s] = min(segtree[s*2+1],segtree[s*2+2]);
     }
-  
-    bool connect(int A,int B) {
-      A = root(A);
-      B = root(B);
-      if(A == B) return false;
-      if(size(A) < size(B)) swap(A,B);
-      Parent[A] += Parent[B];
-      Parent[B] = A;
-      return true;
+  }
+  void dec(int idx) {
+    int s = sz(segtree) - (N-idx);
+    segtree[s]--;
+    while(1) {
+      if(s == 0) break;
+      s = (s-1)/2;
+      segtree[s] = min(segtree[s*2+1],segtree[s*2+2]);
     }
+  }
+  int _query(int a,int b,int idx,int l,int r) {
+    if(a <= l && r <= b) return segtree[idx];
+    if(r <= a || b <= l) return INF;
+    int vl = _query(a,b,idx*2+1,l,(l+r)/2);
+    int rl = _query(a,b,idx*2+2,(l+r)/2,r);
+    return min(vl,rl);
+  }
+  // min(A[i] | 0 <= i < x)
+  int query() {
+    return _query(0,n,0,0,N);
+  }
+};
+
+struct UnionFindUndo {
+  vi data;
+  stack<edge> history;
+  UnionFindUndo() {
+    data.assign(n, -1);
+  }
+  bool unite(int x, int y) {
+    x = find(x), y = find(y);
+    history.emplace(x, data[x]);
+    history.emplace(y, data[y]);
+    if(x == y) return false;
+    if(data[x] > data[y]) swap(x, y);
+    data[x] += data[y];
+    data[y] = x;
+    return true;
+  }
+  int find(int k) {
+    if(data[k] < 0) return (k);
+    return find(data[k]);
+  }
+  int size(int k) {
+    return -data[find(k)];
+  }
+  void undo() {
+    data[history.top().first] = history.top().second;
+    history.pop();
+    data[history.top().first] = history.top().second;
+    history.pop();
+  }
+};
+
+// TrackNeighborsの変更ログ
+// ロールバックと遷移に使う
+struct TrackNeighborsLog {
+  int idx;
+  int left_idx ,left_left ,left_right;
+  int right_idx,right_left,right_right;
+  bool istoggle=false;
+  TrackNeighborsLog(int i) : idx(i) {};
+};
+
+// 現在requiredにもforbiddenにも含まれない辺のみ連結されている
+// 辺はコストの昇順にソートされている
+// また最小一木に使用されているかのフラグも含まれている
+// 最小一木に含まれていない辺のうち一番最後にあるものを次の遷移で用いる
+struct TrackNeighbors {
+  vi left;
+  vi right;
+  const ve val;
+  int len;
+  // true -> 最小一木に使用,false=最小一木に使用されない
+  vector<bool> isused;
+  // 現在のrequired
+  set<int> required;
+  // 現在のused(required以外)
+  set<int> used;
+  TrackNeighbors(ve nei): val(nei),len(sz(nei)) {
+    left.assign(len+2,-1);
+    right.assign(len+2,-1);
+    isused.assign(len+2,false);
+    rep(i,len+1) {
+      left[i+1]=i;
+      right[i]=i+1;
+    }
+  };
+  void rollback(stack<TrackNeighborsLog> log) {
+    while(!log.empty()) {
+      auto x(log.top());
+      log.pop();
+      if(x.istoggle) {
+        if(isused[x.idx+1]) {
+          used.erase(x.idx);
+        } else {
+          used.insert(x.idx);
+        }
+        isused[x.idx+1]=!isused[x.idx+1];
+      } else {
+        left[x.left_idx+1]=x.left_left;
+        right[x.left_idx+1]=x.left_right;
+        left[x.right_idx+1]=x.right_left;
+        right[x.right_idx+1]=x.right_right;
+      }
+    }
+  }
+  void disable(TrackNeighborsLog &log) {
+    // prev left 
+    log.left_idx=left[log.idx+1]-1;
+    log.left_left=left[log.left_idx+1];
+    log.left_right=log.idx+1;
+    // prev right
+    log.right_idx=right[log.idx+1]-1;
+    log.right_left=log.idx+1;
+    log.right_right=right[log.right_idx+1];
+    // now left 
+    right[log.left_idx+1]=log.right_idx+1;
+    // now right 
+    left[log.right_idx+1]=log.left_idx+1;
+  }
+  void toggleFlag(TrackNeighborsLog &log) {
+    log.istoggle=true;
+    isused[log.idx+1]=!isused[log.idx+1];
+  } 
 };
 
 int dist(int i, int j) {
@@ -68,112 +197,301 @@ int dist(int i, int j) {
   return (int)(sqrt(xd * xd + yd * yd) + .5);
 }
 
-ve neighbor;
+int nowlogid=0;
+
+// 「その状態でこれから何をするか」を表している
+struct DfsLog {
+  int id;
+  int idx;
+  bool isforbidden;
+  int lb;
+  DfsLog(int i,bool isf,int _lb): idx(i),isforbidden(isf),lb(_lb) {
+    id=nowlogid++;
+  }
+};
+
+// 「その状態でどのような操作を行ったか」を表している
+// 帰りがけ順の処理(rollback)をする
+struct StateLog {
+  int id;
+  int idx;
+  stack<TrackNeighborsLog> tnlog;
+  bool isforbidden;
+  StateLog(DfsLog l):idx(l.idx),isforbidden(l.isforbidden),id(l.id) {};
+};
 
 struct State {
-  vs required;
-  vs forbidden;
-  State(): required(n),forbidden(n) {};
-  State(vs r,vs f): required(r),forbidden(f) {};
-  int lower_bound() {
-    UnionFind uf(n);
-    int res = 0;
-    int hasplus1=0;
-    int num=0;
-    rep(a,n) {
-      for(int b:required[a]) {
-        if(a>b) continue;
-        if(uf.root(a)!=uf.root(b)) {
-          uf.connect(a,b);
-          res += dist(a,b);
-          num++;
-        } else if(!hasplus1) {
-          hasplus1++;
-          res += dist(a,b);
-          num++;
-        } else {
-          return INF;
+  // 各頂点に隣接している辺のうち、禁止されていない本数(入出次数)
+  // 最小値が2未満のとき、巡回路を構築するのは不可能
+  RMQ dims;
+  // 状態
+  UnionFindUndo uf;
+  TrackNeighbors tn;
+  // dfsに使うログ
+  stack<DfsLog> log;
+  // rollbackに使うログ
+  stack<StateLog> rlog;
+  // 現在のrequiredを結合したときの辺のコスト
+  int rq=0;
+  // 現在の下界 (これはdfsが深いほど増加する)
+  int lb=0;
+
+  State(ve nei): tn(nei) {}
+  // 遷移適用
+  void apply(DfsLog &k,StateLog &diff) {
+    lb=k.lb;
+    if(k.isforbidden) {
+      dims.dec(tn.val[k.idx].first);
+      dims.dec(tn.val[k.idx].second);
+      TrackNeighborsLog x(k.idx);
+      tn.disable(x);
+      diff.tnlog.push(x);
+    } else {
+      if(k.idx<0) return;
+      TrackNeighborsLog x(k.idx);
+      tn.disable(x);
+      diff.tnlog.push(x);
+      uf.unite(tn.val[k.idx].first,tn.val[k.idx].second);
+      tn.required.insert(k.idx);
+      rq += dist(tn.val[k.idx].first,tn.val[k.idx].second);
+    }
+  }
+  // 遷移のロールバック
+  void rollback(StateLog &k) {
+    if(k.isforbidden) {
+      dims.inc(tn.val[k.idx].first);
+      dims.inc(tn.val[k.idx].second);
+      tn.rollback(k.tnlog);
+    } else {
+      uf.undo();
+      tn.rollback(k.tnlog);
+      tn.required.erase(k.idx);
+      rq -= dist(tn.val[k.idx].first,tn.val[k.idx].second);
+    }
+  }
+  // 下界を設定
+  bool lowerbound(StateLog &diff) {
+    int now = sz(uf.history);
+    // 最小一木の構築
+    int res=rq;
+    // 連結に必要ない辺
+    int min_unused=INF;
+    // 全て連結されるまで
+    int rpos=sz(tn.right)-1;
+    for(int pos=tn.right[0];pos<rpos;pos=tn.right[pos]) {
+      //show(pos);
+      //show(tn.val[pos-1].first);
+      //show(tn.val[pos-1].second);
+      //show((uf.find(tn.val[pos-1].first)==uf.find(tn.val[pos-1].second)));
+      //show(tn.isused[pos]);
+      if(uf.find(tn.val[pos-1].first)==uf.find(tn.val[pos-1].second)) {
+        if(min_unused<INF) {
+          if(tn.isused[pos]) {
+            TrackNeighborsLog x(pos-1);
+            tn.toggleFlag(x);
+            diff.tnlog.push(x);
+            tn.used.erase(pos-1);
+          }
+          continue;
+        }
+        chmin(min_unused,pos);
+        res += dist(tn.val[min_unused-1].first,tn.val[min_unused-1].second);
+        if(!tn.isused[pos]) {
+          TrackNeighborsLog x(pos-1);
+          tn.toggleFlag(x);
+          diff.tnlog.push(x);
+          tn.used.insert(pos-1);
+        }
+      } else {
+        uf.unite(tn.val[pos-1].first,tn.val[pos-1].second);
+        res += dist(tn.val[pos-1].first,tn.val[pos-1].second);
+        if(!tn.isused[pos]) {
+          TrackNeighborsLog x(pos-1);
+          tn.toggleFlag(x);
+          diff.tnlog.push(x);
+          tn.used.insert(pos-1);
         }
       }
     }
-    rep(i,sz(neighbor)) {
-      if(num==n) break;
-      edge e = neighbor[i];
-      if(required[e.first].count(e.second)) continue;
-      if(forbidden[e.first].count(e.second)) continue;
-      if(uf.root(e.first)!=uf.root(e.second)) {
-        uf.connect(e.first,e.second);
-        res += dist(e.first,e.second);
-        num++;
-      } else if(!hasplus1) {
-        hasplus1++;
-        res += dist(e.first,e.second);
-        num++;
+    if(min_unused==INF) {
+      //cout << "min_unused not found" << endl;
+      //bool isvalid=isvalidroad();
+      // 復元
+      while(sz(uf.history)>now) {
+        uf.undo();
       }
+      //if(uf.size(0)!=n) {
+      lb=INF;
+      //} else {
+      //  lb=res;
+      //}
+      return false;
     }
-    return res;
+    // 構築不可能
+    if(uf.size(0)!=n||sz(tn.used)+sz(tn.required)!=n) {
+      lb=INF;
+      while(sz(uf.history)>now) {
+        uf.undo();
+      }
+      return false;
+    }
+    bool isvalid=isvalidroad();
+    lb=res;
+    // 復元
+    while(sz(uf.history)>now) {
+      uf.undo();
+    }
+    return isvalid;
   }
-  bool is_valid() {
-    // All dimention of point must be 2
+  
+  int selectedge() {
+    for(int pos=tn.left[sz(tn.left)-1];pos>0;pos=tn.left[pos]) {
+      if(!tn.isused[pos]) return pos-1;
+    }
+    return -INF;
+  }
+  // 復元をする前に実行する
+  bool isvalidroad() {
+    // 1. 全ての頂点が連結
+    if(uf.size(0)!=n) return false;
+    // 2. 辺がn本
+    if(sz(tn.required)+sz(tn.used)!=n) return false;
+    // 3. 全ての頂点の入出次数が2以上残している
+    if(dims.query()<2) return false;
+    // 4. 全ての入出次数が2(O(NlogN)、遅いのでなるべく実行しないか書き換える)
+    vi cnt(n,0);
+    for(int p:tn.required) {
+      cnt[tn.val[p].first]++;
+      cnt[tn.val[p].second]++;
+    }
+    for(int p:tn.used) {
+      cnt[tn.val[p].first]++;
+      cnt[tn.val[p].second]++;
+    }
     rep(i,n) {
-      if(sz(required[i])!=2) {
-        return false;
-      }
+      if(cnt[i]!=2) return false;
     }
-    // Length of cycle must be n 
-    // Num of cycle must be 1
-    //printf("all dim is 2\n");
-    int par=-1;
-    int now=0;
-    int len=1;
-    while(!(required[now].count(0)&&par!=0)&&len<2*n) {
-      len++;
-      int a = *required[now].begin();
-      int b = *required[now].rbegin();
-      //show(now);
-      //show(a);
-      //show(b);
-      int c = a==par?b:a;
-      par=now;
-      now=c;
-    }
-    //show(len);
-    return len==n;
+    return true;
   }
+  // tour更新
   void snapshot() {
+    vvi G(n);
+    for(int p:tn.required) {
+      G[tn.val[p].first].push_back(tn.val[p].second);
+      G[tn.val[p].second].push_back(tn.val[p].first);
+    }
+    for(int p:tn.used) {
+      G[tn.val[p].first].push_back(tn.val[p].second);
+      G[tn.val[p].second].push_back(tn.val[p].first);
+    }
     int par=-1;
     int now=0;
     vi route{0};
-    while(!(required[now].count(0)&&par!=0)) {
-      int a = *required[now].begin();
-      int b = *required[now].rbegin();
+    while(!(par>0&&now==0)) {
+      int a = *G[now].begin();
+      int b = *G[now].rbegin();
       int c = a==par?b:a;
       par=now;
       now=c;
       route.push_back(now);
     }
-    length=0;
     rep(i,n) {
-      length += dist(route[i],route[(i+1)%n]);
       tour[i]=route[i];
     }
   }
+  // 各状態で
+  // 1. 巡回路を作成不可能/上界更新不可能なら探索を打ち切る
+  // 2. validな巡回路ならば上界更新
+  // 3. 次の状態をpush
+  // をO(n)かけずにやりたい
+  void exec() {
+    // rollback state
+    int now = log.top().id;
+    while(!rlog.empty()&&rlog.top().id>now) {
+      rollback(rlog.top());
+      rlog.pop();
+    }
+    StateLog diff(log.top());
+    // 状態遷移　
+    apply(log.top(),diff);
+    /*{
+      show(now);
+      show(length);
+      show(lb);
+      show(log.top().isforbidden);
+      if(log.top().idx>=0) {
+        printf("now: (%d,%d)\n",tn.val[log.top().idx].first,tn.val[log.top().idx].second);
+      }
+      show(log.top().idx);
+    }*/
+    log.pop();
+    // 巡回路を作成不可能
+    if(dims.query()<2) {
+      rlog.push(diff);
+      return;
+    }
+    // 禁止遷移であれば(未使用辺を選んでいるので)、下界に変化はない
+    if(!diff.isforbidden) {
+      bool isvalid = lowerbound(diff);
+      /*{
+        show(dims.query());
+        show(sz(tn.required));
+        show(sz(tn.used));
+        printf("required: ");
+        for(int x:tn.required) {
+          printf("(%d,%d), ",tn.val[x].first,tn.val[x].second);
+        }
+        cout << endl;
+        printf("used: ");
+        for(int x:tn.used) {
+          printf("(%d,%d), ",tn.val[x].first,tn.val[x].second);
+        }
+        cout << endl;
+        printf("lb: %d\n",lb);
+        cout << endl << endl;
+      }*/
+      // 上界更新不可能
+      if(lb>=length) {
+        //printf("上界更新不可能\n");
+        rlog.push(diff);
+        return;
+      }
+      if(isvalid) {
+        // 上界(ベストスコア)更新
+        if(lb<length) {
+          printf("[%d] update upperbound: %d -> %d\n",clock(),length,lb);
+          length=lb;
+          snapshot();
+        }
+        rlog.push(diff);
+        return;
+      }
+    }
+    int k = selectedge();
+    if(k<0) {
+      rlog.push(diff);
+      return;
+    }
+    // 使用遷移
+    // R' = R \cup k
+    // F' = F
+    log.emplace(k,false,lb);
+    // 禁止遷移
+    // R' = R
+    // F' = F \cup k
+    log.emplace(k,true,lb);
+    // ロールバック用log
+    rlog.push(diff);
+  }
 };
 
-vi seq;
-vs feasible;
-
-stack<State> st;
-int bound=INF;
-State best;
-
-void build() {
-  // build rtree
+State build() {
+  length = INF;
   rep(i,n) {
     point p(city[i][0],city[i][1]);
     rtree.insert(make_pair(p,i));
   }
-  // build neighbor max(3,N/100)
+  ve neighbor;
   rep(i,n) {
     point p(city[i][0],city[i][1]);
     vp dst;
@@ -196,163 +514,22 @@ void build() {
     return a.second<b.second;
   });
   uni(neighbor);
-  // build seq(0..N-1)
-  seq.resize(n);
+  State state(neighbor);
+  state.log.emplace(-INF,false,0);
   rep(i,n) {
-    seq[i]=i;
+    state.dims.build(i,0);
   }
-  // build feasible
-  feasible.assign(n,set<int>());
   for(edge e:neighbor) {
-    feasible[e.first].insert(e.second);
-    feasible[e.second].insert(e.first);
+    state.dims.inc(e.first);
+    state.dims.inc(e.second);
   }
+  return state;
 }
-
-int remain_edges(State &s,int p) {
-  return sz(feasible[p])-sz(s.required[p])-sz(s.forbidden[p]);
-}
-
-bool is_unfeasible(State &s) {
-  rep(i,n) {
-    if(sz(feasible[i])-sz(s.forbidden[i])<2) {
-      return true;
-    }
-  }
-  return false;
-}
-
-
-
-void pushS1(State &s,int p,vi &es) {
-  State s1(s);
-  if(sz(es)<2) {
-    if(sz(es)==0) return;
-    // -> S4(R \cup e1,F) (this)
-    // -> S3(R, F \cup e1) 
-    int e1 = es[0];
-    if(sz(s1.required[p])>1) return;
-    if(sz(s1.required[e1])>1) return;
-    s1.required[p].insert(e1);
-    s1.required[e1].insert(p);
-    st.push(s1);
-    //printf("push s4\n");
-    //show(e1);
-    return;
-  }
-  int e1 = es[0];
-  int e2 = es[1];
-  if(sz(s1.required[p])>0) return;
-  if(sz(s1.required[e1])>1) return;
-  if(sz(s1.required[e2])>1) return;
-  s1.required[p].insert(e1);
-  s1.required[e1].insert(p);
-  s1.required[p].insert(e2);
-  s1.required[e2].insert(p);
-  //printf("push s1\n");
-  //show(e1);
-  //show(e2);
-  st.push(s1);
-}
-
-void pushS2(State &s,int p,vi &es) {
-  State s2(s);
-  if(sz(es)<2) return;
-  int e1 = es[0];
-  int e2 = es[1];
-  if(sz(s2.required[p])>1) return;
-  if(sz(s2.required[e1])>1) return;
-  s2.required[p].insert(e1);
-  s2.required[e1].insert(p);
-  s2.forbidden[p].insert(e2);
-  s2.forbidden[e2].insert(p);
-  //printf("push s2\n");
-  //show(e1);
-  //show(e2);
-  st.push(s2);
-}
-
-void pushS3(State &s,int p,vi &es) {
-  State s3(s);
-  if(sz(es)<1) return;
-  int e1 = es[0];
-  if(sz(s3.required[p])>2) return;
-  s3.forbidden[p].insert(e1);
-  s3.forbidden[e1].insert(p);
-  //printf("push s3\n");
-  //show(e1);
-  st.push(s3);
-}
-
-
 
 int tspSolver() {
-  build();
-  st.emplace();
-  //show(sz(neighbor));
-  while(!st.empty()) {
-    State s = st.top();
-    st.pop();
-    int c = s.lower_bound();
-    //cout << endl << endl;
-    //show(c);
-    //printf("---begin required ---\n");
-    /*
-    rep(i,n) {
-      show(i);
-      for(int j:s.required[i]) {
-        show(j);
-      }
-      cout << endl;
-    }*/
-    //printf("---end required ---\n");
-    //printf("---begin forbidden ---\n");
-    /*
-    rep(i,n) {
-      show(i);
-      for(int j:s.forbidden[i]) {
-        show(j);
-      }
-      cout << endl;
-    }*/
-    //printf("---end forbidden ---\n");
-    if(c>=bound) continue;
-    if(is_unfeasible(s)) continue;
-    if(s.is_valid()) {
-      bound=c;
-      best=s;
-      continue;
-    }
-    // choice p
-    sort(rng(seq),[&](int a,int b) {
-      int as = sz(s.required[a]);
-      int bs = sz(s.required[b]);
-      if(as!=bs) {
-        return as>bs; 
-      }
-      int ar = remain_edges(s,a);
-      int br = remain_edges(s,b);
-      if(ar!=br) {
-        return ar<br;
-      }
-      return sz(s.forbidden[a])>sz(s.forbidden[b]);
-    });
-    int pi=0;
-    while(pi<n&&sz(s.required[seq[pi]])==2) pi++;
-    if(pi==n) continue;
-    int p = seq[pi];
-    //show(p);
-    vi es;
-    for(int b:feasible[p]) {
-      if(s.required[p].count(b)) continue;
-      if(s.forbidden[p].count(b)) continue;
-      es.push_back(b);
-    }
-    pushS1(s,p,es);
-    pushS2(s,p,es);
-    pushS3(s,p,es);
+  State state = build();
+  while(!state.log.empty()) {
+    state.exec();
   }
-  //show(bound);
-  best.snapshot();
   return 1;
 }
