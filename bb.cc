@@ -16,6 +16,7 @@
 using namespace std;
 typedef vector<int> vi;
 typedef vector<vi> vvi;
+typedef long long int ll;
 typedef pair<int,int> edge;
 typedef vector<set<int>> vs;
 typedef vector<edge> ve;
@@ -35,10 +36,11 @@ extern void showCTour(int *tou, int wai, int *color);
 extern void showString(char *str);
 extern void showLength(int leng);
 
-struct RMQ {
+struct RMQUndo {
   int N;
   vi segtree;
-  RMQ() {
+  stack<vi> history;
+  RMQUndo() {
     N = 1;
     int len = 1;
     while(N < n) {
@@ -55,6 +57,10 @@ struct RMQ {
       s = (s-1)/2;
       segtree[s] = min(segtree[s*2+1],segtree[s*2+2]);
     }
+  }
+  int at(int idx) {
+    int s = sz(segtree) - (N-idx);
+    return segtree[s];
   }
   void inc(int idx) {
     int s = sz(segtree) - (N-idx);
@@ -84,6 +90,15 @@ struct RMQ {
   // min(A[i] | 0 <= i < x)
   int query() {
     return _query(0,n,0,0,N);
+  }
+  void snapshot() {
+    history.push(segtree);
+  }
+  // O(N)かかるのでなるべく使わない
+  // snapshot()時の状態に戻る
+  void undo() {
+    segtree=history.top();
+    history.pop();
   }
 };
 
@@ -197,11 +212,11 @@ int dist(int i, int j) {
   return (int)(sqrt(xd * xd + yd * yd) + .5);
 }
 
-int nowlogid=0;
+ll nowlogid=0;
 
 // 「その状態でこれから何をするか」を表している
 struct DfsLog {
-  int id;
+  ll id;
   int idx;
   bool isforbidden;
   int lb;
@@ -213,7 +228,7 @@ struct DfsLog {
 // 「その状態でどのような操作を行ったか」を表している
 // 帰りがけ順の処理(rollback)をする
 struct StateLog {
-  int id;
+  ll id;
   int idx;
   stack<TrackNeighborsLog> tnlog;
   bool isforbidden;
@@ -223,7 +238,10 @@ struct StateLog {
 struct State {
   // 各頂点に隣接している辺のうち、禁止されていない本数(入出次数)
   // 最小値が2未満のとき、巡回路を構築するのは不可能
-  RMQ availabledims;
+  RMQUndo availabledims;
+  // 各頂点に隣接している辺のうち、requiredな本数(入出次数)
+  // 最大値が3以上のとき、巡回路を構築するのは不可能
+  RMQUndo requireddims;
   // 状態
   UnionFindUndo uf;
   TrackNeighbors tn;
@@ -254,6 +272,8 @@ struct State {
       uf.unite(tn.val[k.idx].first,tn.val[k.idx].second);
       tn.required.insert(k.idx);
       rq += dist(tn.val[k.idx].first,tn.val[k.idx].second);
+      requireddims.inc(tn.val[k.idx].first);
+      requireddims.inc(tn.val[k.idx].second);
     }
   }
   // 遷移のロールバック
@@ -267,11 +287,14 @@ struct State {
       tn.rollback(k.tnlog);
       tn.required.erase(k.idx);
       rq -= dist(tn.val[k.idx].first,tn.val[k.idx].second);
+      requireddims.dec(tn.val[k.idx].first);
+      requireddims.dec(tn.val[k.idx].second);
     }
   }
   // 下界を設定
   bool lowerbound(StateLog &diff) {
     int now = sz(uf.history);
+    requireddims.snapshot();
     // 最小一木の構築
     int res=rq;
     // 連結に必要ない辺
@@ -291,6 +314,8 @@ struct State {
         }
         chmin(min_unused,pos);
         res += dist(tn.val[min_unused-1].first,tn.val[min_unused-1].second);
+        requireddims.inc(tn.val[min_unused-1].first);
+        requireddims.inc(tn.val[min_unused-1].second);
         if(!tn.isused[pos]) {
           TrackNeighborsLog x(pos-1);
           tn.toggleFlag(x);
@@ -300,6 +325,8 @@ struct State {
       } else {
         uf.unite(tn.val[pos-1].first,tn.val[pos-1].second);
         res += dist(tn.val[pos-1].first,tn.val[pos-1].second);
+        requireddims.inc(tn.val[pos-1].first);
+        requireddims.inc(tn.val[pos-1].second);
         if(!tn.isused[pos]) {
           TrackNeighborsLog x(pos-1);
           tn.toggleFlag(x);
@@ -314,6 +341,7 @@ struct State {
         uf.undo();
       }
       lb=INF;
+      requireddims.undo();
       return false;
     }
     // 構築不可能
@@ -322,6 +350,7 @@ struct State {
       while(sz(uf.history)>now) {
         uf.undo();
       }
+      requireddims.undo();
       return false;
     }
     bool isvalid=isvalidroad();
@@ -330,6 +359,7 @@ struct State {
     while(sz(uf.history)>now) {
       uf.undo();
     }
+    requireddims.undo();
     return isvalid;
   }
   
@@ -347,20 +377,8 @@ struct State {
     if(sz(tn.required)+sz(tn.used)!=n) return false;
     // 3. 全ての頂点の入出次数が2以上残している
     if(availabledims.query()<2) return false;
-    // 4. 全ての入出次数が2(O(NlogN)、遅いのでなるべく実行しないか書き換える)
-    vi cnt(n,0);
-    for(int p:tn.required) {
-      cnt[tn.val[p].first]++;
-      cnt[tn.val[p].second]++;
-    }
-    for(int p:tn.used) {
-      cnt[tn.val[p].first]++;
-      cnt[tn.val[p].second]++;
-    }
-    rep(i,n) {
-      if(cnt[i]!=2) return false;
-    }
-    return true;
+    // 4. 全ての入出次数が2
+    return requireddims.query()==2;
   }
   // tour更新
   void snapshot() {
@@ -395,7 +413,7 @@ struct State {
   // をO(n)かけずにやりたい
   void exec() {
     // rollback state
-    int now = log.top().id;
+    ll now = log.top().id;
     while(!rlog.empty()&&rlog.top().id>now) {
       rollback(rlog.top());
       rlog.pop();
@@ -434,10 +452,13 @@ struct State {
       rlog.push(diff);
       return;
     }
-    // 使用遷移
-    // R' = R \cup k
-    // F' = F
-    log.emplace(k,false,lb);
+    // この辺が接続する頂点の次数が既に2だったとき、使用不可能
+    if(requireddims.at(tn.val[k].first)<2&&requireddims.at(tn.val[k].second)<2) {
+      // 使用遷移
+      // R' = R \cup k
+      // F' = F
+      log.emplace(k,false,lb);
+    }
     // 禁止遷移
     // R' = R
     // F' = F \cup k
@@ -480,6 +501,7 @@ State build() {
   state.log.emplace(-INF,false,0);
   rep(i,n) {
     state.availabledims.build(i,0);
+    state.requireddims.build(i,0);
   }
   for(edge e:neighbor) {
     state.availabledims.inc(e.first);
