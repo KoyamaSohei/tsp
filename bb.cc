@@ -137,7 +137,7 @@ struct TrackNeighbors {
   vi right;
   const ve val;
   int len;
-  // true -> 最小一木に使用,false=最小一木に使用されない
+  // true -> 最小一木に使用,false->最小一木に使用されない
   vector<bool> isused;
   // 現在のrequired
   set<int> required;
@@ -279,11 +279,6 @@ struct State {
     // 全て連結されるまで
     int rpos=sz(tn.right)-1;
     for(int pos=tn.right[0];pos<rpos;pos=tn.right[pos]) {
-      //show(pos);
-      //show(tn.val[pos-1].first);
-      //show(tn.val[pos-1].second);
-      //show((uf.find(tn.val[pos-1].first)==uf.find(tn.val[pos-1].second)));
-      //show(tn.isused[pos]);
       if(uf.find(tn.val[pos-1].first)==uf.find(tn.val[pos-1].second)) {
         if(min_unused<INF) {
           if(tn.isused[pos]) {
@@ -314,17 +309,11 @@ struct State {
       }
     }
     if(min_unused==INF) {
-      //cout << "min_unused not found" << endl;
-      //bool isvalid=isvalidroad();
       // 復元
       while(sz(uf.history)>now) {
         uf.undo();
       }
-      //if(uf.size(0)!=n) {
       lb=INF;
-      //} else {
-      //  lb=res;
-      //}
       return false;
     }
     // 構築不可能
@@ -414,16 +403,6 @@ struct State {
     StateLog diff(log.top());
     // 状態遷移　
     apply(log.top(),diff);
-    /*{
-      show(now);
-      show(length);
-      show(lb);
-      show(log.top().isforbidden);
-      if(log.top().idx>=0) {
-        printf("now: (%d,%d)\n",tn.val[log.top().idx].first,tn.val[log.top().idx].second);
-      }
-      show(log.top().idx);
-    }*/
     log.pop();
     // 巡回路を作成不可能
     if(dims.query()<2) {
@@ -433,23 +412,6 @@ struct State {
     // 禁止遷移であれば(未使用辺を選んでいるので)、下界に変化はない
     if(!diff.isforbidden) {
       bool isvalid = lowerbound(diff);
-      /*{
-        show(dims.query());
-        show(sz(tn.required));
-        show(sz(tn.used));
-        printf("required: ");
-        for(int x:tn.required) {
-          printf("(%d,%d), ",tn.val[x].first,tn.val[x].second);
-        }
-        cout << endl;
-        printf("used: ");
-        for(int x:tn.used) {
-          printf("(%d,%d), ",tn.val[x].first,tn.val[x].second);
-        }
-        cout << endl;
-        printf("lb: %d\n",lb);
-        cout << endl << endl;
-      }*/
       // 上界更新不可能
       if(lb>=length) {
         //printf("上界更新不可能\n");
