@@ -362,10 +362,39 @@ struct State {
     requireddims.undo();
     return isvalid;
   }
-  
+  // この辺を禁止した場合構築できなくなるとき、禁止不可能
+  bool canForbidden(int k) {
+    int a = tn.val[k].first;
+    if(availabledims.at(a)==2) return false;
+    int b = tn.val[k].second;
+    if(availabledims.at(b)==2) return false;
+    return true;
+  }
+  // この辺が接続する頂点の次数が既に2だったとき、使用不可能
+  bool canUse(int k) {
+    if(requireddims.at(tn.val[k].first)>=2) return false;
+    if(requireddims.at(tn.val[k].second)>=2) return false;
+    return true;
+  }
   int selectedge() {
+    // 禁止遷移のみ可能な辺を返す
     for(int pos=tn.left.back();pos>0;pos=tn.left[pos]) {
       if(tn.isused[pos]) continue;
+      if(!canForbidden(pos-1)) continue;
+      if(canUse(pos-1)) continue;
+      return pos-1;
+    }
+    // 使用遷移のみ可能な辺を返す
+    for(int pos=tn.left.back();pos>0;pos=tn.left[pos]) {
+      if(tn.isused[pos]) continue;
+      if(canForbidden(pos-1)) continue;
+      if(!canUse(pos-1)) continue;
+      return pos-1;
+    }
+    // 遷移可能な辺を返す
+    for(int pos=tn.left.back();pos>0;pos=tn.left[pos]) {
+      if(tn.isused[pos]) continue;
+      if(!canForbidden(pos-1)&&!canUse(pos-1)) continue;
       return pos-1;
     }
     return -INF;
@@ -385,20 +414,14 @@ struct State {
   // R' = R \cup k
   // F' = F
   void pushS1(int k) {
-    // この辺が接続する頂点の次数が既に2だったとき、使用不可能
-    if(requireddims.at(tn.val[k].first)>=2) return;
-    if(requireddims.at(tn.val[k].second)>=2) return;
-    
+    if(!canUse(k)) return;
     log.emplace(k,false,lb);
   }
   // 禁止遷移
   // R' = R
   // F' = F \cup k
   void pushS2(int k) {
-    // この辺が接続する頂点に接続する辺が他にない場合、禁止不可能
-    int a = tn.val[k].first;
-    int b = tn.val[k].second;
-
+    if(!canForbidden(k)) return;
     log.emplace(k,true,lb);
   }
   // tour更新
