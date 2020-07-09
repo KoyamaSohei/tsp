@@ -223,7 +223,7 @@ struct StateLog {
 struct State {
   // 各頂点に隣接している辺のうち、禁止されていない本数(入出次数)
   // 最小値が2未満のとき、巡回路を構築するのは不可能
-  RMQ dims;
+  RMQ availabledims;
   // 状態
   UnionFindUndo uf;
   TrackNeighbors tn;
@@ -241,8 +241,8 @@ struct State {
   void apply(DfsLog &k,StateLog &diff) {
     lb=k.lb;
     if(k.isforbidden) {
-      dims.dec(tn.val[k.idx].first);
-      dims.dec(tn.val[k.idx].second);
+      availabledims.dec(tn.val[k.idx].first);
+      availabledims.dec(tn.val[k.idx].second);
       TrackNeighborsLog x(k.idx);
       tn.disable(x);
       diff.tnlog.push(x);
@@ -259,8 +259,8 @@ struct State {
   // 遷移のロールバック
   void rollback(StateLog &k) {
     if(k.isforbidden) {
-      dims.inc(tn.val[k.idx].first);
-      dims.inc(tn.val[k.idx].second);
+      availabledims.inc(tn.val[k.idx].first);
+      availabledims.inc(tn.val[k.idx].second);
       tn.rollback(k.tnlog);
     } else {
       uf.undo();
@@ -346,7 +346,7 @@ struct State {
     // 2. 辺がn本
     if(sz(tn.required)+sz(tn.used)!=n) return false;
     // 3. 全ての頂点の入出次数が2以上残している
-    if(dims.query()<2) return false;
+    if(availabledims.query()<2) return false;
     // 4. 全ての入出次数が2(O(NlogN)、遅いのでなるべく実行しないか書き換える)
     vi cnt(n,0);
     for(int p:tn.required) {
@@ -405,7 +405,7 @@ struct State {
     apply(log.top(),diff);
     log.pop();
     // 巡回路を作成不可能
-    if(dims.query()<2) {
+    if(availabledims.query()<2) {
       rlog.push(diff);
       return;
     }
@@ -479,11 +479,11 @@ State build() {
   State state(neighbor);
   state.log.emplace(-INF,false,0);
   rep(i,n) {
-    state.dims.build(i,0);
+    state.availabledims.build(i,0);
   }
   for(edge e:neighbor) {
-    state.dims.inc(e.first);
-    state.dims.inc(e.second);
+    state.availabledims.inc(e.first);
+    state.availabledims.inc(e.second);
   }
   return state;
 }
