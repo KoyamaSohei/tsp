@@ -26,6 +26,8 @@ namespace bg = boost::geometry;
 namespace bgi = boost::geometry::index;
 typedef bg::model::point<float, 2, bg::cs::cartesian> point;
 
+#define DEBUG 0
+
 bgi::rtree<pair<point,unsigned>,bgi::quadratic<MAX>> rtree;
 typedef vector<pair<point,unsigned>> vp;
 
@@ -483,7 +485,9 @@ struct State {
       if(isvalid) {
         // 上界(ベストスコア)更新
         if(lb<length) {
-          printf("[%d] update upperbound: %d -> %d\n",clock(),length,lb);
+          if(DEBUG) {
+            printf("[%d] update upperbound: %d -> %d\n",clock(),length,lb);
+          }
           length=lb;
           snapshot();
         }
@@ -589,8 +593,6 @@ void printMap(State &state) {
   fprintf(fp,"</svg>\n");
   fclose(fp);
 }
-
-const int DEBUG=1;
 
 int tspSolver() {
   State state = build();
