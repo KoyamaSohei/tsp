@@ -364,8 +364,9 @@ struct State {
   }
   
   int selectedge() {
-    for(int pos=tn.left[sz(tn.left)-1];pos>0;pos=tn.left[pos]) {
-      if(!tn.isused[pos]) return pos-1;
+    for(int pos=tn.left.back();pos>0;pos=tn.left[pos]) {
+      if(tn.isused[pos]) continue;
+      return pos-1;
     }
     return -INF;
   }
@@ -379,6 +380,26 @@ struct State {
     if(availabledims.query()<2) return false;
     // 4. 全ての入出次数が2
     return requireddims.query()==2;
+  }
+  // 使用遷移
+  // R' = R \cup k
+  // F' = F
+  void pushS1(int k) {
+    // この辺が接続する頂点の次数が既に2だったとき、使用不可能
+    if(requireddims.at(tn.val[k].first)>=2) return;
+    if(requireddims.at(tn.val[k].second)>=2) return;
+    
+    log.emplace(k,false,lb);
+  }
+  // 禁止遷移
+  // R' = R
+  // F' = F \cup k
+  void pushS2(int k) {
+    // この辺が接続する頂点に接続する辺が他にない場合、禁止不可能
+    int a = tn.val[k].first;
+    int b = tn.val[k].second;
+
+    log.emplace(k,true,lb);
   }
   // tour更新
   void snapshot() {
@@ -452,17 +473,8 @@ struct State {
       rlog.push(diff);
       return;
     }
-    // この辺が接続する頂点の次数が既に2だったとき、使用不可能
-    if(requireddims.at(tn.val[k].first)<2&&requireddims.at(tn.val[k].second)<2) {
-      // 使用遷移
-      // R' = R \cup k
-      // F' = F
-      log.emplace(k,false,lb);
-    }
-    // 禁止遷移
-    // R' = R
-    // F' = F \cup k
-    log.emplace(k,true,lb);
+    pushS1(k);
+    pushS2(k);
     // ロールバック用log
     rlog.push(diff);
   }
