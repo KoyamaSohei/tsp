@@ -545,8 +545,63 @@ State build() {
   return state;
 }
 
+// for DEBUG
+void printMap(State &state) {
+  FILE *fp = fopen("bb.prog.svg","w");
+  if(fp==NULL) {
+    fprintf(stderr, "cannot open file!\n");
+    return;
+  }
+  double pad,r;
+  double xmin=INF,xmax=-INF,ymin=INF,ymax=-INF;
+  {
+    
+    rep(i,n) {
+      xmin = min(xmin,1.0*city[i][0]);
+      xmax = max(xmax,1.0*city[i][0]);
+      ymin = min(ymin,1.0*city[i][1]);
+      ymax = max(ymax,1.0*city[i][1]);
+    }
+    pad = max(xmax-xmin,ymax-ymin)*0.1;
+    r = min(xmax-xmin,ymax-ymin)/100;
+  }
+  fprintf(fp,"<svg viewBox=\"%f %f %f %f\" xmlns=\"http://www.w3.org/2000/svg\">\n",xmin-pad,ymin-pad,(xmax-xmin)+2*pad,(ymax-ymin)+2*pad);
+  rep(i,n) {
+    double x1=city[i][0];
+    double y1=city[i][1];
+    fprintf(fp,"  <circle cx=\"%f\" cy=\"%f\" r=\"%f\"/>\n",x1,y1,r);
+  }
+  for(int k:state.tn.required) {
+    double x1=city[state.tn.val[k].first][0];
+    double y1=city[state.tn.val[k].first][1];
+    double x2=city[state.tn.val[k].second][0];
+    double y2=city[state.tn.val[k].second][1];
+    fprintf(fp,"  <line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" stroke=\"red\" stroke-width=\"%f\" />\n",x1,y1,x2,y2,r);
+  }
+  for(int k:state.tn.used) {
+    double x1=city[state.tn.val[k].first][0];
+    double y1=city[state.tn.val[k].first][1];
+    double x2=city[state.tn.val[k].second][0];
+    double y2=city[state.tn.val[k].second][1];
+    fprintf(fp,"  <line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" stroke=\"black\" stroke-width=\"%f\" />\n",x1,y1,x2,y2,r);
+  }
+  fprintf(fp,"  <text x=\"%f\" y=\"%f\" font-size=\"%f\">lb: %d</text>\n",pad,pad,pad*0.5,state.lb);
+  fprintf(fp,"</svg>\n");
+  fclose(fp);
+}
+
+const int DEBUG=1;
+
 int tspSolver() {
   State state = build();
+  if(DEBUG) {
+    for(ll cnt=0;!state.log.empty();cnt++) {
+      state.exec();
+      if(cnt%1000000) continue;
+      printMap(state);
+    }
+    return 1;
+  }
   while(!state.log.empty()) {
     state.exec();
   }
