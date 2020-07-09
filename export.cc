@@ -29,6 +29,7 @@ int main() {
   }
   int score = 0;
   double pad = max(xmax-xmin,ymax-ymin)*0.1;
+  double r = min(xmax-xmin,ymax-ymin)/100;
   printf("<svg viewBox=\"%f %f %f %f\" xmlns=\"http://www.w3.org/2000/svg\">\n",xmin-pad,ymin-pad,(xmax-xmin)+2*pad,(ymax-ymin)+2*pad);
   rep(i,N) {
     double x1=pos[i].first;
@@ -38,9 +39,8 @@ int main() {
     double xd = x2-x1;
     double yd = y2-y1;
     score += (int)(sqrt(xd * xd + yd * yd) + .5);
-    printf("  <line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" stroke=\"black\" />\n",x1,y1,x2,y2);
+    printf("  <line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" stroke=\"black\" stroke-width=\"%f\" />\n",x1,y1,x2,y2,r);
   }
-  double r = min(xmax-xmin,ymax-ymin)/100;
   rep(i,N) {
     double x1=pos[i].first;
     double y1=pos[i].second;
