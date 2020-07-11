@@ -55,12 +55,11 @@ class UnionFind {
     }
 };
 
-int xor64(void) {
-  static uint64_t x = 88172645463325252ULL;
-  x = x ^ (x << 13); x = x ^ (x >> 7);
-  return x = x ^ (x << 17);
+unsigned int randxor() {
+    static unsigned int x=123456789,y=362436069,z=521288629,w=88675123;
+    unsigned int t;
+    t=(x^(x<<11));x=y;y=z;z=w; return( w=(w^(w>>19))^(t^(t>>8)) );
 }
-
 
 int dist(int i, int j) {
   float xd = city[i][0] - city[j][0];
@@ -90,11 +89,25 @@ int getNextPoint(int k) {
   }
   return -1;
 }
+const double LIMIT=2.0;
+vi neighbor[MAX];
+int bestlen = INF;
+vi bestlog;
+clock_t startt,endt;
+double temperature = 50.0;
 
-vi neighbor10[MAX];
-
-// TODO: そこそこ良い構築をする
+// 初期解をNearest Neighbor法で構築
+// 未訪問の近傍の都市を求めるために、Rtreeを用いることで、計算量を落とした
 void build() {
+  {
+    // init log
+    bestlog.resize(n);
+  }
+  {
+    // set time
+    startt = clock();
+    endt = startt + CLOCKS_PER_SEC*LIMIT;
+  }
   {
     // build rtree
     rep(i,n) {
@@ -122,7 +135,7 @@ void build() {
     }
   }
   {
-    // build neighbor10
+    // build neighbor
     rep(i,n) {
       point p(city[i][0],city[i][1]);
       vp dst;
@@ -130,7 +143,7 @@ void build() {
       for(auto nea:dst) {
         int id = nea.second;
         if(id==i) continue;
-        neighbor10[i].push_back(id);
+        neighbor[i].push_back(id);
       }
     }
   }
@@ -150,31 +163,63 @@ void flip(int ai,int bi,int ci,int di) {
   }
 }
 
-void twoopt() {
-  rep(i,n) {
-    int a = tour[i];
-    int b = tour[(i+1)%n];
-    int k = neighbor10[a][abs(xor64())%sz(neighbor10[a])];
-    int c = tour[k];
-    if(b==c) continue;
-    int d = tour[(k+1)%n];
-    if(b==d||a==d) continue;
-    int tmp = dist(a,b)+dist(c,d)-dist(a,c)-dist(b,d);
-    if(tmp>0) {
-      flip(i,(i+1)%n,k,(k+1)%n);
-      length-=tmp;
-      return;
+
+void snapshot() {
+  if(bestlen>length) {
+    chmin(bestlen,length);
+    bestlog.resize(n);
+    rep(i,n) {
+      bestlog[i]=tour[i];
     }
   }
 }
 
-const double LIMIT=2.0;
+bool moveNext(int tmp) {
+  clock_t now = clock();
+  double x = double(randxor()%10000)/10000;
+  double y = exp(double(tmp)/temperature);
+  return x<y;
+}
+
+int cnt = 0;
+
+void sa() {
+  int x = randxor()%n;
+  int a = tour[x];
+  int b = tour[(x+1)%n];
+  int k = neighbor[a][randxor()%sz(neighbor[a])];
+  int c = tour[k];
+  if(b==c) return;
+  int d = tour[(k+1)%n];
+  if(b==d||a==d) return;
+  int tmp = dist(a,b)+dist(c,d)-dist(a,c)-dist(b,d);
+  if(tmp>0) {
+    flip(x,(x+1)%n,k,(k+1)%n);
+    length-=tmp;
+    cnt--;
+    return;
+  }
+  cnt++;
+  if(!moveNext(tmp)) {
+    return;
+  }
+  flip(x,(x+1)%n,k,(k+1)%n);
+  length-=tmp;
+}
 
 int tspSolver() {
   build();
-  const auto until_ck = clock() + CLOCKS_PER_SEC*LIMIT;
-  while(clock() < until_ck) {
-    twoopt();
+  while(clock() < endt) {
+    sa();
+    snapshot();
+    if(cnt>CLOCKS_PER_SEC*0.0001) {
+      temperature *= 0.4;
+      cnt = 0;
+    }
+  }
+  length = bestlen;
+  rep(i,n) {
+    tour[i]=bestlog[i];
   }
   return 1;
 }
