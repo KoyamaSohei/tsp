@@ -169,7 +169,7 @@ void twoopt() {
   }
 }
 
-const double LIMIT=2000.0;
+const double LIMIT=2.0;
 
 int tspSolver() {
   build();
