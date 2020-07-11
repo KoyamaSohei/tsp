@@ -92,10 +92,20 @@ int getNextPoint(int k) {
 }
 const double LIMIT=2.0;
 vi neighbor[MAX];
-int bestlen = INF;
+int bestlen=INF;
 vi bestlog;
 clock_t startt,endt;
 double temperature = 50.0;
+
+void snapshot() {
+  if(bestlen>length) {
+    chmin(bestlen,length);
+    bestlog.resize(n);
+    rep(i,n) {
+      bestlog[i]=tour[i];
+    }
+  }
+}
 
 // 初期解をNearest Neighbor法で構築
 // 未訪問の近傍の都市を求めるために、Rtreeを用いることで、計算量を落とした
@@ -134,6 +144,7 @@ void build() {
     rep(i,n) {
       length += dist(tour[i],tour[(i+1)%n]);
     }
+    snapshot();
   }
   {
     // build neighbor
@@ -161,17 +172,6 @@ void flip(int ai,int bi,int ci,int di) {
   for(int p=bi;p!=di;p=(p+1)%n) {
     tour[p]=st.top();
     st.pop();
-  }
-}
-
-
-void snapshot() {
-  if(bestlen>length) {
-    chmin(bestlen,length);
-    bestlog.resize(n);
-    rep(i,n) {
-      bestlog[i]=tour[i];
-    }
   }
 }
 
