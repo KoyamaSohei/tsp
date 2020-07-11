@@ -127,7 +127,7 @@ void build() {
     rep(i,n) {
       point p(city[i][0],city[i][1]);
       vp dst;
-      rtree.query(bgi::nearest(p,max(n,11)),back_inserter(dst));
+      rtree.query(bgi::nearest(p,min(n,MAX/10)),back_inserter(dst));
       for(auto nea:dst) {
         int id = nea.second;
         if(id==i) continue;
