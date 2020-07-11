@@ -28,33 +28,6 @@ extern void showCTour(int *tou, int wai, int *color);
 extern void showString(char *str);
 extern void showLength(int leng);
 
-class UnionFind {
-  public:
-    vi Parent;
-    UnionFind(int N) {
-      Parent = vi(N,-1);
-    }
-  
-    int root(int A) {
-      if(Parent[A] < 0) return A;
-      return Parent[A] = root(Parent[A]);
-    }
-  
-    int size(int A) {
-      return -Parent[root(A)];
-    }
-  
-    bool connect(int A,int B) {
-      A = root(A);
-      B = root(B);
-      if(A == B) return false;
-      if(size(A) < size(B)) swap(A,B);
-      Parent[A] += Parent[B];
-      Parent[B] = A;
-      return true;
-    }
-};
-
 int xor64() {
   static uint64_t x = 88172645463325252ULL;
   x = x ^ (x << 13); x = x ^ (x >> 7);
@@ -68,33 +41,47 @@ int dist(int i, int j) {
   return (int)(sqrt(xd * xd + yd * yd) + .5);
 }
 
-UnionFind uf(MAX);
+struct RMQ {
+  vi segtree;
+  int N;
+  RMQ() {
+    N = 1;
+    int len = 1;
+    while(N < n) {
+      N *= 2;
+      len += N;
+    }
+    segtree = vi(len,INF);
+  }
+  void build(int idx,int val) {
+    int s = sz(segtree) - (N-idx);
+    segtree[s] = val;
+    while(1) {
+      if(s == 0) break;
+      s = (s-1)/2;
+      segtree[s] = min(segtree[s*2+1],segtree[s*2+2]);
+    }
+  }
+  int _query(int a,int b,int idx,int l,int r) {
+    if(a <= l && r <= b) return segtree[idx];
+    if(r <= a || b <= l) return INF;
+    int vl = _query(a,b,idx*2+1,l,(l+r)/2);
+    int rl = _query(a,b,idx*2+2,(l+r)/2,r);
+    return min(vl,rl);
+  }
+  // min(A[i] | l <= i < r)
+  int query(int l,int r) {
+    return _query(l,r,0,0,N);
+  }
+};
+
 
 bgi::rtree<pair<point,unsigned>,bgi::quadratic<MAX>> rtree;
 typedef vector<pair<point,unsigned>> vp;
 
-int getNextPoint(int k) {
-  point p(city[k][0],city[k][1]);
-  int num=2;
-  while(1) {
-    vp dst;
-    rtree.query(bgi::nearest(p,num),back_inserter(dst));
-    for(auto nea:dst) {
-      int id = nea.second;
-      if(id==k) continue;
-      if(uf.root(id)==uf.root(k)) continue;
-      uf.connect(id,k);
-      return id;
-    }
-    num <<= 1;
-  }
-  return -1;
-}
-
 vi neighbor[MAX];
 
-// 初期解をNearest Neighbor法で構築
-// 未訪問の近傍の都市を求めるために、Rtreeを用いることで、計算量を落とした
+// 初期解をNearest Insertion法で構築
 void build() {
   {
     // build rtree
@@ -105,21 +92,78 @@ void build() {
   }
   {
     // build initial path
-    vi next(n,-1);
-    int k=n-1;
-    rep(i,n-1) {
-      int nex = getNextPoint(k);
-      next[k]=nex;
-      k=nex;
+    vector<set<int>> G(n);
+    // 巡回路に含まれる頂点集合x,その補集合y
+    set<int> x,y;
+    x.insert(0);
+    G[0].insert(0);
+    srep(i,1,n) {
+      y.insert(i);
     }
-    next[k]=n-1;
-    k=n-1;
+    // 各頂点間の距離を前計算
+    // xにはいっているもののみ更新
+    vector<RMQ> rmq(n);
     rep(i,n) {
-      tour[i]=k;
-      k=next[k];
+      rmq[i].build(0,dist(0,i));
     }
+    while(sz(x)<n) {
+      int k=-INF,kr=INF;
+      for(int i:y) {
+        int r = rmq[i].query(0,n);
+        if(kr>r) {
+          kr=r;
+          k=i;
+        }
+      }
+      int a=-INF,b=-INF,abr=INF;
+      for(int i:x) {
+        for(int j:G[i]) {
+          int r = dist(i,k)+dist(k,j)-dist(i,j);
+          if(r<abr) {
+            abr=r;
+            a=i;
+            b=j;
+          }
+        }
+      }
+      if(a==b) {
+        G[a].insert(k);
+        G[k].insert(a);
+        G[a].erase(b);
+      } else if(sz(x)==2) {
+        G[a].insert(k);
+        G[k].insert(a);
+        G[b].insert(k);
+        G[k].insert(b);
+      } else {
+        G[a].erase(b);
+        G[b].erase(a);
+        G[a].insert(k);
+        G[b].insert(k);
+        G[k].insert(a);
+        G[k].insert(b);
+      }
+      x.insert(k);
+      y.erase(k);
+      rep(i,n) {
+        rmq[i].build(k,dist(k,i));
+      }
+    }
+    int par=-1;
+    int now=0;
+    vi route{0};
+    while(!(par>0&&now==0)) {
+      int a = *G[now].begin();
+      int b = *G[now].rbegin();
+      int c = a==par?b:a;
+      par=now;
+      now=c;
+      route.push_back(now);
+    }
+    length=0;
     rep(i,n) {
-      length += dist(tour[i],tour[(i+1)%n]);
+      tour[i]=route[i];
+      length += dist(route[i],route[(i+1)%n]);
     }
   }
   {
