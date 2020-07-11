@@ -55,12 +55,12 @@ class UnionFind {
     }
 };
 
-int xor64(void) {
+int xor64() {
   static uint64_t x = 88172645463325252ULL;
   x = x ^ (x << 13); x = x ^ (x >> 7);
-  return x = x ^ (x << 17);
+  x = x ^ (x << 17);
+  return abs(int(x));
 }
-
 
 int dist(int i, int j) {
   float xd = city[i][0] - city[j][0];
@@ -155,7 +155,7 @@ void twoopt() {
   rep(i,n) {
     int a = tour[i];
     int b = tour[(i+1)%n];
-    int k = neighbor[a][abs(xor64())%sz(neighbor[a])];
+    int k = neighbor[a][xor64()%sz(neighbor[a])];
     int c = tour[k];
     if(b==c) continue;
     int d = tour[(k+1)%n];

@@ -55,10 +55,11 @@ class UnionFind {
     }
 };
 
-unsigned int randxor() {
-    static unsigned int x=123456789,y=362436069,z=521288629,w=88675123;
-    unsigned int t;
-    t=(x^(x<<11));x=y;y=z;z=w; return( w=(w^(w>>19))^(t^(t>>8)) );
+int xor64() {
+  static uint64_t x = 88172645463325252ULL;
+  x = x ^ (x << 13); x = x ^ (x >> 7);
+  x = x ^ (x << 17);
+  return abs(int(x));
 }
 
 int dist(int i, int j) {
@@ -176,7 +177,7 @@ void snapshot() {
 
 bool moveNext(int tmp) {
   clock_t now = clock();
-  double x = double(randxor()%10000)/10000;
+  double x = double(xor64()%10000)/10000;
   double y = exp(double(tmp)/temperature);
   return x<y;
 }
@@ -184,10 +185,10 @@ bool moveNext(int tmp) {
 int cnt = 0;
 
 void sa() {
-  int x = randxor()%n;
+  int x = xor64()%n;
   int a = tour[x];
   int b = tour[(x+1)%n];
-  int k = neighbor[a][randxor()%sz(neighbor[a])];
+  int k = neighbor[a][xor64()%sz(neighbor[a])];
   int c = tour[k];
   if(b==c) return;
   int d = tour[(k+1)%n];
