@@ -1,7 +1,7 @@
 #!/bin/bash
 
 a=("ni" "nn" "fi" "greedy")
-b=("2opt" "sa")
+b=("2opt" "sa" "tabu")
 c=("a280" "usa13509")
 
 for i in "${a[@]}"
