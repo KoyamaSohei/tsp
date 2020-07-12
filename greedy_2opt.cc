@@ -164,9 +164,15 @@ void twoopt() {
   rep(i,n) {
     int a = tour[i];
     int b = tour[(i+1)%n];
-    int k = neighbor[a][xor64()%sz(neighbor[a])];
-    int c = tour[k];
+    int c = neighbor[a][xor64()%sz(neighbor[a])];
     if(b==c) continue;
+    int k;
+    rep(j,n) {
+      if(tour[j]==c) {
+        k=j;
+        break;
+      }
+    }
     int d = tour[(k+1)%n];
     if(b==d||a==d) continue;
     int tmp = dist(a,b)+dist(c,d)-dist(a,c)-dist(b,d);
