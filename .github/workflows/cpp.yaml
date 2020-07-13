@@ -10,7 +10,7 @@ jobs:
       with:
         persist-credentials: false
         fetch-depth: 0
-    - name: Upate dist
+    - name: Update dist
       run: |
         sh ./util/evaluate.sh
     - name: Commit files
