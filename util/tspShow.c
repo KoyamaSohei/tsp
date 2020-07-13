@@ -41,9 +41,6 @@
 #include<math.h>
 #include<float.h>
 
-#include<X11/Xlib.h>
-#include<X11/Xutil.h>
-
 /// tspr
 
 /// max of number of cities 
@@ -74,164 +71,9 @@ int ctColor = 0x000072;
 int toColor[] = {0x000072, 0xBB0000, 0x004000, 0x7f7f7f};
 int toCNum = 4;
 
-Display *dis;
-Window win;
-Pixmap pm;
-XSetWindowAttributes att;
-XEvent ev;
-GC gc, gcb;
-
 int *icity;
 int waitPer = 100;
 int gActive = 1;
-
-//;
-
-//: 'showing functions'
-
-//: "showTour"
-void showTour(int *tou, int wai, int color)
-{
-  int i;
-
-  if(gActive == 0) return;
-
-  //XClearWindow(dis, win);
-  XFillRectangle(dis, pm, gcb, 0, 0, winSize + winMarg * 2, winSize + winMarg * 2);
-  
-  XSetForeground(dis, gc, ctColor);
-  for(i = 0; i < n; i++) {
-    XDrawRectangle(dis, pm, gc, icity[i * 2] - 2, icity[i * 2 + 1] - 2, 4, 4);
-  }
-  
-  if(color < 0 || toCNum <= color) color = 0;
-  XSetForeground(dis, gc, toColor[color]);
-
-  for(i = 0; i < n - 1; i++) {
-    XDrawLine(dis, pm, gc, icity[tou[i] * 2],
-        icity[tou[i] * 2 + 1], 
-        icity[tou[i + 1] * 2],
-        icity[tou[i + 1] * 2 + 1]);
-  }
-  XDrawLine(dis, pm, gc, icity[tou[n - 1] * 2],
-      icity[tou[n - 1] * 2 + 1],
-      icity[tou[0] * 2],
-      icity[tou[0] * 2 + 1]);
- 
-  XCopyArea(dis, pm, win, gc, 0, 0, winSize + winMarg * 2, winSize + winMarg * 2, 0, 0);
-  XFlush(dis);
-
-  if(wai != 0 && waitPer != 0); {
-    usleep(wai * waitPer * 10);
-  }
-  
-  return;
-}
-//;
-
-//: "showCTour"
-void showCTour(int *tou, int wai, int *colors)
-{
-  int t1;
-  int i;
-  
-  if(gActive == 0) return;
-
-  XFillRectangle(dis, pm, gcb, 0, 0, winSize + winMarg * 2, winSize + winMarg * 2);
-  
-  XSetForeground(dis, gc, ctColor);
-  for(i = 0; i < n; i++) {
-    XDrawRectangle(dis, pm, gc, icity[i * 2] - 2, icity[i * 2 + 1] - 2, 4, 4);
-  }
-  
-  for(i = 0; ; i++) {
-    t1 = colors[i];
-    if(t1 < 0 || toCNum <= t1) t1 = 0;
-    XSetForeground(dis, gc, t1);
- 
-    if(i == n - 1) break;
-    XDrawLine(dis, pm, gc, icity[tou[i] * 2],
-        icity[tou[i] * 2 + 1], 
-        icity[tou[i + 1] * 2],
-        icity[tou[i + 1] * 2 + 1]);
-  }
-  XDrawLine(dis, pm, gc, icity[tou[n - 1] * 2],
-      icity[tou[n - 1] * 2 + 1],
-      icity[tou[0] * 2],
-      icity[tou[0] * 2 + 1]);
-
- 
-  XCopyArea(dis, pm, win, gc, 0, 0, winSize + winMarg * 2, winSize + winMarg * 2, 0, 0);
-  XFlush(dis);
-
-  if(wai != 0 && waitPer != 0); {
-    usleep(wai * waitPer * 10);
-  }
-
-  return;
-}
-//;
-
-//: "showNTour"
-void showNTour(int *next, int start, int wai, int color) 
-{
-  int i, j;
-  
-  if(gActive == 0) return;
-  
-  //XClearWindow(dis, win);
-  XFillRectangle(dis, pm, gcb, 0, 0, winSize + winMarg * 2, winSize + winMarg * 2);
-  
-  XSetForeground(dis, gc, ctColor);
-  for(i = 0; i < n; i++) {
-    XDrawRectangle(dis, pm, gc, icity[i * 2] - 2, icity[i * 2 + 1] - 2, 4, 4);
-  }
-  
-  if(color < 0 || toCNum <= color) color = 0;
-  XSetForeground(dis, gc, toColor[color]);
-
-  j = start;
-  for(i = next[start]; ; i = next[i]) {
-    XDrawLine(dis, pm, gc, icity[i * 2],
-        icity[i * 2 + 1], 
-        icity[j * 2],
-        icity[j * 2 + 1]);
-    if(i == start) break;
-    j = i;
-  }
-  
-  XCopyArea(dis, pm, win, gc, 0, 0, winSize + winMarg * 2, winSize + winMarg * 2, 0, 0);
-  XFlush(dis);
-
-  if(wai != 0 && waitPer != 0); {
-    usleep(wai * waitPer * 10);
-  }
-  
-  return;
-}
-//;
-
-//: "showString"
-void showString(char *str)
-{
-  if(gActive == 0) return;
-  
-  XStoreName(dis, win, str);
-  
-  return;
-}
-//;
-
-//: "showLength"
-void showLength(int leng)
-{
-  fprintf(stderr, "length = %d           \r", leng);
-  
-  return;
-}
-//;
-
-//;
 
 //: "main"
 int main(int argc, char *argv[]) 
@@ -458,85 +300,9 @@ int main(int argc, char *argv[])
   //: tspg init
   icity = (int *)malloc(sizeof(int) * n * 2);
   
-  if(gActive != 0) {
-  
-    for(i = 0; i < n; i++) {
-      d = (double)(city[i][0]);
-      if(d > maxx) maxx = d;
-      if(d < minx) minx = d;
-      d = (double)(city[i][1]);
-      if(d > maxy) maxy = d;
-      if(d < miny) miny = d;
-    }
-
-    cenx = (maxx + minx) / 2;
-    ceny = (maxy + miny) / 2;
-    
-    if(maxx != minx) {
-      wid = maxx - minx; 
-    } else {
-      wid = 1.0;
-    }
-    if(maxy != miny) {
-      hei = maxy - miny;
-    } else {
-      wid = 1.0;
-    }
-    if(as == 0) {
-      if(wid <= hei) {
-        wid = hei;
-      } else {
-        hei = wid;
-      }
-    }
-    for(i = 0; i < n; i++) {
-      icity[i * 2] = (int)((city[i][0] - cenx) * winSize / wid) + winMarg + winSize / 2;
-      icity[i * 2 + 1] = - (int)((city[i][1] - ceny) * winSize / hei) + winMarg + winSize / 2;
-    }
-    for(i = 0; i < n; i++) {
-      tour[i] = i;
-    }
-    
-    dis = XOpenDisplay(NULL);
-    win = XCreateSimpleWindow(dis, RootWindow(dis, 0),
-            50, 50, winSize + winMarg * 2, winSize + winMarg * 2,
-            3, ctColor, bgColor);
-    pm = XCreatePixmap(dis, win, winSize + winMarg * 2, winSize + winMarg * 2,
-           DefaultDepth(dis, 0));
-
-    XSetStandardProperties(dis, win, "tspShow", "tspShow", None, argv, argc, NULL);
-    
-    //att.backing_store = WhenMapped;
-    //XChangeWindowAttributes(dis, win, CWBackingStore, &att);
-    
-    XMapWindow(dis, win);
-    XFlush(dis);
-    
-    XSelectInput(dis, win, ButtonPressMask | ExposureMask);
-    
-    /*
-      do {
-      XNextEvent(dis, &ev);
-      }while(ev.type != Expose);
-      printf("0K\n");
-    */
-    usleep(500000);
-
-    gc = XCreateGC(dis, win, 0, 0);
-    gcb = XCreateGC(dis, win, 0, 0);
-    XSetForeground(dis, gcb, bgColor);
-    XSetBackground(dis, gcb, bgColor);
-  }
-  //;
-
   //enu
   tspSolver();
   
-  //: solved
-  if(gActive != 0) {
-    showTour(tour, 0, 0);
-    showString("finish!");
-  }
   
   if(cis == 1) {
     printf("%d\n", n);
@@ -560,18 +326,6 @@ int main(int argc, char *argv[])
     fprintf(stderr, "length = %d (%d?)\n", t1, length); 
   } else {
     fprintf(stderr, "length = %d            \n", t1);
-  }
-  //;
-  
-  //: end
-  if(gActive != 0) {
-    do {
-      XNextEvent(dis, &ev);
-    }while(ev.type != ButtonPress);
-  
-    XFreeGC(dis, gc);
-    XDestroyWindow(dis, win);
-    XCloseDisplay(dis);
   }
   //;
   
