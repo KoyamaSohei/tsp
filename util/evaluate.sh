@@ -10,7 +10,8 @@ do
   do
     for k in "${c[@]}"
     do
-      eval "./${i}_${j}.out -n -c lib/${k}.tsp | ./export.out > dist/${k}.${i}_${j}.svg"
+      echo "build: ${i} improve: ${j} target: ${k}"
+      eval "time ./${i}_${j}.out -n -c lib/${k}.tsp | ./export.out > dist/${k}.${i}_${j}.svg"
     done
   done
 done
