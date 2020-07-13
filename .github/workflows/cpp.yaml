@@ -12,6 +12,10 @@ jobs:
         fetch-depth: 0
     - name: Update dist
       run: |
+        mkdir lib && cd lib
+        wget http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/ALL_tsp.tar.gz
+        tar -zxvf ALL_tsp.tar.gz
+        cd ../
         bash ./util/evaluate.sh
     - name: Commit files
       run: |
