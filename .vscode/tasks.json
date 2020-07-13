@@ -4,7 +4,7 @@
     {
       "label": "build",
       "type": "shell",
-      "command": "g++ -O2 -I/usr/include/X11/ -L/usr/lib/ -lX11 -lm tspShow.c ${relativeFile} -o ${fileBasenameNoExtension}.out",
+      "command": "g++ -O2 -I/usr/include/X11/ -L/usr/lib/ -lX11 -lm util/tspShow.c ${relativeFile} -o ${fileBasenameNoExtension}.out",
       "isBackground": true,
       "group": {
         "kind": "build",
