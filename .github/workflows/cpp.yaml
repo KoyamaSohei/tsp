@@ -1,6 +1,6 @@
 name: eval
 
-on: [pull_request]
+on: [push]
 
 jobs:
   build:
@@ -28,5 +28,5 @@ jobs:
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: ${{ github.head_ref }}
+        branch: ${{ github.ref }}
         force: true
