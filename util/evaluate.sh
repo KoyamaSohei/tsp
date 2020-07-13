@@ -4,6 +4,10 @@ a=("ni" "nn" "fi" "greedy")
 b=("2opt" "sa" "tabu" "combopt")
 c=("a280" "usa13509")
 
+for k in "${c[@]}"
+do
+  eval "gzip -d lib/${k}.tsp.gz"
+done
 
 for i in "${a[@]}"
 do
