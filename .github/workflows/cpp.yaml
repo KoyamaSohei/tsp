@@ -16,6 +16,8 @@ jobs:
         wget http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/ALL_tsp.tar.gz
         tar -zxvf ALL_tsp.tar.gz
         cd ../
+        sudo apt install libboost-dev
+        g++ util/export.cc -o export.out 
         bash ./util/evaluate.sh
     - name: Commit files
       run: |
