@@ -10,6 +10,7 @@ jobs:
       with:
         persist-credentials: false
         fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.ref }}
     - name: Update dist
       run: |
         mkdir lib && cd lib
@@ -23,10 +24,11 @@ jobs:
       run: |
         git config --local user.email "koyamaso0309@gmail.com"
         git config --local user.name "KoyamaSohei"
-        git commit -m "Update dist" -a
+        git add .
+        git commit -m "update: dist"
     - name: Push changes
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: ${{ github.ref }}
+        branch: ${{ github.event.pull_request.head.ref }}
         force: true

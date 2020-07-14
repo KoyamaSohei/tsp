@@ -208,6 +208,13 @@ struct TrackNeighbors {
   } 
 };
 
+int xor64() {
+  static uint64_t x = 88172645463325252ULL;
+  x = x ^ (x << 13); x = x ^ (x >> 7);
+  x = x ^ (x << 17);
+  return abs(int(x));
+}
+
 int dist(int i, int j) {
   float xd = city[i][0] - city[j][0];
   float yd = city[i][1] - city[j][1];
@@ -507,24 +514,147 @@ struct State {
   }
 };
 
+vi neighbor[MAX];
+
+// before: a -> b,c -> d
+//  after: a -> c,b -> d
+// => reverse b ... c
+void flip(int ai,int bi,int ci,int di) {
+  stack<int> st;
+  for(int p=bi;p!=di;p=(p+1)%n) {
+    st.push(tour[p]);
+  }
+  for(int p=bi;p!=di;p=(p+1)%n) {
+    tour[p]=st.top();
+    st.pop();
+  }
+}
+
+void twoopt() {
+  rep(i,n) {
+    int a = tour[i];
+    int b = tour[(i+1)%n];
+    int c = neighbor[a][xor64()%sz(neighbor[a])];
+    if(b==c) continue;
+    int k;
+    rep(j,n) {
+      if(tour[j]==c) {
+        k=j;
+        break;
+      }
+    }
+    int d = tour[(k+1)%n];
+    if(b==d||a==d) continue;
+    int tmp = dist(a,b)+dist(c,d)-dist(a,c)-dist(b,d);
+    if(tmp>0) {
+      flip(i,(i+1)%n,k,(k+1)%n);
+      length-=tmp;
+      return;
+    }
+  }
+}
+
+// なるべくいい上界をきめる
+// FI / 2optをそのまま使う
+void setupperbound() {
+  // build initial path
+  vector<set<int>> G(n);
+  // 巡回路に含まれる頂点集合x,その補集合y
+  set<int> x,y;
+  x.insert(0);
+  G[0].insert(0);
+  srep(i,1,n) {
+    y.insert(i);
+  }
+  // 各頂点間の距離を前計算
+  // xにはいっているもののみ更新
+  vector<RMQUndo> rmq(n);
+  rep(i,n) {
+    rmq[i].build(0,dist(0,i));
+  }
+  while(sz(x)<n) {
+    int k=-INF,kr=-INF;
+    for(int i:y) {
+      int r = rmq[i].query();
+      if(kr<r) {
+        kr=r;
+        k=i;
+      }
+    }
+    int a=-INF,b=-INF,abr=INF;
+    for(int i:x) {
+      for(int j:G[i]) {
+        int r = dist(i,k)+dist(k,j)-dist(i,j);
+        if(r<abr) {
+          abr=r;
+          a=i;
+          b=j;
+        }
+      }
+    }
+    if(a==b) {
+      G[a].insert(k);
+      G[k].insert(a);
+      G[a].erase(b);
+    } else if(sz(x)==2) {
+      G[a].insert(k);
+      G[k].insert(a);
+      G[b].insert(k);
+      G[k].insert(b);
+    } else {
+      G[a].erase(b);
+      G[b].erase(a);
+      G[a].insert(k);
+      G[b].insert(k);
+      G[k].insert(a);
+      G[k].insert(b);
+    }
+    x.insert(k);
+    y.erase(k);
+    rep(i,n) {
+      rmq[i].build(k,dist(k,i));
+    }
+  }
+  int par=-1;
+  int now=0;
+  vi route{0};
+  while(!(par>0&&now==0)) {
+    int a = *G[now].begin();
+    int b = *G[now].rbegin();
+    int c = a==par?b:a;
+    par=now;
+    now=c;
+    route.push_back(now);
+  }
+  length=0;
+  rep(i,n) {
+    tour[i]=route[i];
+    length += dist(route[i],route[(i+1)%n]);
+  }
+  const auto until_ck = clock() + CLOCKS_PER_SEC*2.0;
+  while(clock() < until_ck) {
+    twoopt();
+  }
+}
+
 State build() {
-  length = INF;
   rep(i,n) {
     point p(city[i][0],city[i][1]);
     rtree.insert(make_pair(p,i));
   }
-  ve neighbor;
+  ve neighbore;
   rep(i,n) {
     point p(city[i][0],city[i][1]);
     vp dst;
-    rtree.query(bgi::nearest(p,min(n,MAX/10)),back_inserter(dst));
+    rtree.query(bgi::nearest(p,int(10*log2(n))),back_inserter(dst));
     for(auto nea:dst) {
       int id = nea.second;
       if(id==i) continue;
-      neighbor.emplace_back(minmax(id,i));
+      neighbore.emplace_back(minmax(id,i));
+      neighbor[i].push_back(id);
     }
   }
-  sort(rng(neighbor),[&](edge a,edge b) {
+  sort(rng(neighbore),[&](edge a,edge b) {
     int ad = dist(a.first,a.second);
     int bd = dist(b.first,b.second);
     if(ad!=bd) {
@@ -535,17 +665,18 @@ State build() {
     }
     return a.second<b.second;
   });
-  uni(neighbor);
-  State state(neighbor);
+  uni(neighbore);
+  State state(neighbore);
   state.log.emplace(-INF,false,0);
   rep(i,n) {
     state.availabledims.build(i,0);
     state.requireddims.build(i,0);
   }
-  for(edge e:neighbor) {
+  for(edge e:neighbore) {
     state.availabledims.inc(e.first);
     state.availabledims.inc(e.second);
   }
+  setupperbound();  
   return state;
 }
 

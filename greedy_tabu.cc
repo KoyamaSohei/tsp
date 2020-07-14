@@ -76,12 +76,12 @@ typedef vector<pair<point,unsigned>> vp;
 
 UnionFind uf(MAX);
 
-const double LIMIT=2.0;
+double LIMIT=2.0;
 vi neighbor[MAX];
 int bestlen=INF;
 vi bestlog;
 clock_t startt,endt;
-const int TL=50;
+const int TL=20;
 
 void snapshot() {
   if(bestlen>length) {
@@ -100,11 +100,6 @@ void build() {
   {
     // init log
     bestlog.resize(n);
-  }
-  {
-    // set time
-    startt = clock();
-    endt = startt + CLOCKS_PER_SEC*LIMIT;
   }
   {
     // set tabu
@@ -168,13 +163,23 @@ void build() {
     rep(i,n) {
       point p(city[i][0],city[i][1]);
       vp dst;
-      rtree.query(bgi::nearest(p,min(n,MAX/10)),back_inserter(dst));
+      rtree.query(bgi::nearest(p,int(10*log2(n))),back_inserter(dst));
       for(auto nea:dst) {
         int id = nea.second;
         if(id==i) continue;
         neighbor[i].push_back(id);
       }
     }
+  }
+  {
+    // set time
+    char *tl = getenv("TIME_LIMIT");
+    if(tl != NULL) {
+      LIMIT = stod(tl);
+    }
+    cerr << "timelimit: " << LIMIT << endl;
+    startt = clock();
+    endt = startt + CLOCKS_PER_SEC*LIMIT;
   }
 }
 

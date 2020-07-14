@@ -127,7 +127,7 @@ void build() {
     rep(i,n) {
       point p(city[i][0],city[i][1]);
       vp dst;
-      rtree.query(bgi::nearest(p,min(n,MAX/10)),back_inserter(dst));
+      rtree.query(bgi::nearest(p,int(10*log2(n))),back_inserter(dst));
       for(auto nea:dst) {
         int id = nea.second;
         if(id==i) continue;
@@ -202,10 +202,15 @@ void combopt() {
   }
 }
 
-const double LIMIT=2.0;
+double LIMIT=2.0;
 
 int tspSolver() {
   build();
+  char *tl = getenv("TIME_LIMIT");
+  if(tl != NULL) {
+    LIMIT = stod(tl);
+  }
+  cerr << "timelimit: " << LIMIT << endl;
   const auto until_ck = clock() + CLOCKS_PER_SEC*LIMIT;
   while(clock() < until_ck) {
     combopt();
