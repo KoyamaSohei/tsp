@@ -300,19 +300,100 @@ struct State {
       requireddims.dec(tn.val[k.idx].second);
     }
   }
+  // どうにかして頂点0につながる辺を取り除くと最小全域木になるように構築
+  // 頂点0につながる辺を2つとも取り除き、0以外の頂点の最小全域木を構築するようにする
+  // UFは新しく作る
+  // TODO: ufを 書き換える (うまくrequireddims[0]!=2のときにロールバックもする)
+  bool lowerboundv2(StateLog &diff,int now) {
+    UnionFindUndo uf2;
+    int res=0;
+    for(int p: tn.required) {
+      res += dist(tn.val[p].first,tn.val[p].second);
+      if(tn.val[p].first==0) continue;
+      if(tn.val[p].second==0) continue;
+      uf2.unite(tn.val[p].first,tn.val[p].second);
+    }
+    int rpos=sz(tn.right)-1;
+    for(int pos=tn.right[0];pos<rpos;pos=tn.right[pos]) {
+      int a =tn.val[pos-1].first;
+      int b =tn.val[pos-1].second;
+      if(a==0||b==0) {
+        if(tn.isused[pos]) {
+          TrackNeighborsLog x(pos-1);
+          tn.toggleFlag(x);
+          diff.tnlog.push(x);
+          tn.used.erase(pos-1);
+        }
+        continue;
+      }
+      if(uf2.find(a)==uf2.find(b)) {
+        if(tn.isused[pos]) {
+          TrackNeighborsLog x(pos-1);
+          tn.toggleFlag(x);
+          diff.tnlog.push(x);
+          tn.used.erase(pos-1);
+        }
+        continue;
+      }
+      uf.unite(a,b);
+      uf2.unite(a,b);
+      res += dist(a,b);
+      requireddims.inc(a);
+      requireddims.inc(b);
+      if(!tn.isused[pos]) {
+        TrackNeighborsLog x(pos-1);
+        tn.toggleFlag(x);
+        diff.tnlog.push(x);
+        tn.used.insert(pos-1);
+      }
+    }
+    // 構築不可能
+    if(uf2.size(1)!=n-1||sz(tn.used)+sz(tn.required)!=n) {
+      lb=INF;
+      // 復元
+      while(sz(uf.history)>now) {
+        uf.undo();
+      }
+      lb=INF;
+      requireddims.undo();
+      return false;
+    }
+    bool isvalid=isvalidroad();
+    lb=res;
+    // 復元
+    while(sz(uf.history)>now) {
+      uf.undo();
+    }
+    requireddims.undo();
+    return isvalid;
+  }
   // 下界を設定
   bool lowerbound(StateLog &diff) {
     int now = sz(uf.history);
     requireddims.snapshot();
     // 最小一木の構築
     int res=rq;
-    // 連結に必要ない辺
-    int min_unused=INF;
+    // 頂点0に連結している辺の数
+    int dim=requireddims.at(0);
+    // 2のとき、0をのぞく頂点の最小全域木を構築
+    if(dim==2) {
+      return lowerboundv2(diff,now);
+    }
+    // 0より大きい時、頂点0を端点とする辺は最小全域木につかわない
     // 全て連結されるまで
     int rpos=sz(tn.right)-1;
     for(int pos=tn.right[0];pos<rpos;pos=tn.right[pos]) {
       if(uf.find(tn.val[pos-1].first)==uf.find(tn.val[pos-1].second)) {
-        if(min_unused<INF) {
+        if(tn.isused[pos]) {
+          TrackNeighborsLog x(pos-1);
+          tn.toggleFlag(x);
+          diff.tnlog.push(x);
+          tn.used.erase(pos-1);
+        }
+        continue;
+      }
+      if(tn.val[pos-1].first==0||tn.val[pos-1].second==0) {
+        if(dim>=1) {
           if(tn.isused[pos]) {
             TrackNeighborsLog x(pos-1);
             tn.toggleFlag(x);
@@ -321,30 +402,33 @@ struct State {
           }
           continue;
         }
-        chmin(min_unused,pos);
-        res += dist(tn.val[min_unused-1].first,tn.val[min_unused-1].second);
-        requireddims.inc(tn.val[min_unused-1].first);
-        requireddims.inc(tn.val[min_unused-1].second);
-        if(!tn.isused[pos]) {
-          TrackNeighborsLog x(pos-1);
-          tn.toggleFlag(x);
-          diff.tnlog.push(x);
-          tn.used.insert(pos-1);
-        }
-      } else {
-        uf.unite(tn.val[pos-1].first,tn.val[pos-1].second);
-        res += dist(tn.val[pos-1].first,tn.val[pos-1].second);
-        requireddims.inc(tn.val[pos-1].first);
-        requireddims.inc(tn.val[pos-1].second);
-        if(!tn.isused[pos]) {
-          TrackNeighborsLog x(pos-1);
-          tn.toggleFlag(x);
-          diff.tnlog.push(x);
-          tn.used.insert(pos-1);
-        }
+        dim++;
+      }
+      uf.unite(tn.val[pos-1].first,tn.val[pos-1].second);
+      res += dist(tn.val[pos-1].first,tn.val[pos-1].second);
+      requireddims.inc(tn.val[pos-1].first);
+      requireddims.inc(tn.val[pos-1].second);
+      if(!tn.isused[pos]) {
+        TrackNeighborsLog x(pos-1);
+        tn.toggleFlag(x);
+        diff.tnlog.push(x);
+        tn.used.insert(pos-1);
       }
     }
-    if(min_unused==INF) {
+    for(int pos=tn.right[0];pos<rpos&&dim<2;pos=tn.right[pos]) {
+      if(tn.isused[pos]) continue;
+      if(tn.val[pos-1].first!=0&&tn.val[pos-1].second!=0) continue;
+      res += dist(tn.val[pos-1].first,tn.val[pos-1].second);
+      requireddims.inc(tn.val[pos-1].first);
+      requireddims.inc(tn.val[pos-1].second);
+      dim++;
+      TrackNeighborsLog x(pos-1);
+      tn.toggleFlag(x);
+      diff.tnlog.push(x);
+      tn.used.insert(pos-1);
+      break;
+    }
+    if(dim!=2) {
       // 復元
       while(sz(uf.history)>now) {
         uf.undo();
