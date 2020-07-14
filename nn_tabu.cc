@@ -99,7 +99,7 @@ vi neighbor[MAX];
 int bestlen=INF;
 vi bestlog;
 clock_t startt,endt;
-const int TL=50;
+const int TL=20;
 
 void snapshot() {
   if(bestlen>length) {
