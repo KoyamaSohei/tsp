@@ -102,16 +102,6 @@ void build() {
     bestlog.resize(n);
   }
   {
-    // set time
-    char *tl = getenv("TIME_LIMIT");
-    if(tl != NULL) {
-      LIMIT = stod(tl);
-    }
-    cerr << "timelimit: " << LIMIT << endl;
-    startt = clock();
-    endt = startt + CLOCKS_PER_SEC*LIMIT;
-  }
-  {
     // set tabu
     lifetime.assign(n,TL);
   }
@@ -180,6 +170,16 @@ void build() {
         neighbor[i].push_back(id);
       }
     }
+  }
+  {
+    // set time
+    char *tl = getenv("TIME_LIMIT");
+    if(tl != NULL) {
+      LIMIT = stod(tl);
+    }
+    cerr << "timelimit: " << LIMIT << endl;
+    startt = clock();
+    endt = startt + CLOCKS_PER_SEC*LIMIT;
   }
 }
 
