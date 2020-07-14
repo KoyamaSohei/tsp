@@ -10,6 +10,7 @@ jobs:
       with:
         persist-credentials: false
         fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.ref }}
     - name: Update dist
       run: |
         mkdir lib && cd lib
@@ -29,5 +30,5 @@ jobs:
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: ${{ github.ref }}
+        branch: ${{ github.event.pull_request.head.ref }}
         force: true
