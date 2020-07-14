@@ -244,6 +244,11 @@ struct StateLog {
   StateLog(DfsLog l):idx(l.idx),isforbidden(l.isforbidden),id(l.id) {};
 };
 
+// 最小TARGET木
+// 頂点TARGETに接続してある辺を一つ取り除いても、最小全域木になる
+// 近傍の点が離れているほど実行時間がかかる？
+int TARGET=0;
+
 struct State {
   // 各頂点に隣接している辺のうち、禁止されていない本数(入出次数)
   // 最小値が2未満のとき、巡回路を構築するのは不可能
@@ -309,15 +314,15 @@ struct State {
     int res=0;
     for(int p: tn.required) {
       res += dist(tn.val[p].first,tn.val[p].second);
-      if(tn.val[p].first==0) continue;
-      if(tn.val[p].second==0) continue;
+      if(tn.val[p].first==TARGET) continue;
+      if(tn.val[p].second==TARGET) continue;
       uf2.unite(tn.val[p].first,tn.val[p].second);
     }
     int rpos=sz(tn.right)-1;
     for(int pos=tn.right[0];pos<rpos;pos=tn.right[pos]) {
       int a =tn.val[pos-1].first;
       int b =tn.val[pos-1].second;
-      if(a==0||b==0) {
+      if(a==TARGET||b==TARGET) {
         if(tn.isused[pos]) {
           TrackNeighborsLog x(pos-1);
           tn.toggleFlag(x);
@@ -348,7 +353,7 @@ struct State {
       }
     }
     // 構築不可能
-    if(uf2.size(1)!=n-1||sz(tn.used)+sz(tn.required)!=n) {
+    if(uf2.size((TARGET+1)%n)!=n-1||sz(tn.used)+sz(tn.required)!=n) {
       lb=INF;
       // 復元
       while(sz(uf.history)>now) {
@@ -374,7 +379,7 @@ struct State {
     // 最小一木の構築
     int res=rq;
     // 頂点0に連結している辺の数
-    int dim=requireddims.at(0);
+    int dim=requireddims.at(TARGET);
     // 2のとき、0をのぞく頂点の最小全域木を構築
     if(dim==2) {
       return lowerboundv2(diff,now);
@@ -383,7 +388,9 @@ struct State {
     // 全て連結されるまで
     int rpos=sz(tn.right)-1;
     for(int pos=tn.right[0];pos<rpos;pos=tn.right[pos]) {
-      if(uf.find(tn.val[pos-1].first)==uf.find(tn.val[pos-1].second)) {
+      int a = tn.val[pos-1].first;
+      int b = tn.val[pos-1].second;
+      if(uf.find(a)==uf.find(b)) {
         if(tn.isused[pos]) {
           TrackNeighborsLog x(pos-1);
           tn.toggleFlag(x);
@@ -392,7 +399,7 @@ struct State {
         }
         continue;
       }
-      if(tn.val[pos-1].first==0||tn.val[pos-1].second==0) {
+      if(a==TARGET||b==TARGET) {
         if(dim>=1) {
           if(tn.isused[pos]) {
             TrackNeighborsLog x(pos-1);
@@ -404,10 +411,10 @@ struct State {
         }
         dim++;
       }
-      uf.unite(tn.val[pos-1].first,tn.val[pos-1].second);
-      res += dist(tn.val[pos-1].first,tn.val[pos-1].second);
-      requireddims.inc(tn.val[pos-1].first);
-      requireddims.inc(tn.val[pos-1].second);
+      uf.unite(a,b);
+      res += dist(a,b);
+      requireddims.inc(a);
+      requireddims.inc(b);
       if(!tn.isused[pos]) {
         TrackNeighborsLog x(pos-1);
         tn.toggleFlag(x);
@@ -417,10 +424,12 @@ struct State {
     }
     for(int pos=tn.right[0];pos<rpos&&dim<2;pos=tn.right[pos]) {
       if(tn.isused[pos]) continue;
-      if(tn.val[pos-1].first!=0&&tn.val[pos-1].second!=0) continue;
-      res += dist(tn.val[pos-1].first,tn.val[pos-1].second);
-      requireddims.inc(tn.val[pos-1].first);
-      requireddims.inc(tn.val[pos-1].second);
+      int a = tn.val[pos-1].first;
+      int b = tn.val[pos-1].second;
+      if(a!=TARGET&&b!=TARGET) continue;
+      res += dist(a,b);
+      requireddims.inc(a);
+      requireddims.inc(b);
       dim++;
       TrackNeighborsLog x(pos-1);
       tn.toggleFlag(x);
