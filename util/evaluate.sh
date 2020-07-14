@@ -2,7 +2,7 @@
 
 a=("ni" "nn" "fi" "greedy")
 b=("2opt" "sa" "tabu" "combopt")
-c=("a280" "usa13509")
+c=("ulysses22" "pr107" "a280" "u574" "u1060" "u2319" "rl5915" "usa13509")
 
 for k in "${c[@]}"
 do
