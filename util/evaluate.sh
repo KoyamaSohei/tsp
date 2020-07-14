@@ -23,7 +23,6 @@ do
       do
         export TIME_LIMIT=$l
         eval "time ./${i}_${j}.out -n -c lib/${k}.tsp | ./export.out > dist/${k}.${i}_${j}.${l}s.svg"
-        echo $TIME_LIMIT
         sleep 3
       done
     done
