@@ -724,7 +724,7 @@ void setupperbound() {
     tour[i]=route[i];
     length += dist(route[i],route[(i+1)%n]);
   }
-  const auto until_ck = clock() + CLOCKS_PER_SEC*2.0;
+  const auto until_ck = clock() + CLOCKS_PER_SEC*0.5;
   while(clock() < until_ck) {
     twoopt();
   }
