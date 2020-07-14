@@ -94,7 +94,7 @@ int getNextPoint(int k) {
   return -1;
 }
 
-const double LIMIT=2.0;
+double LIMIT=2.0;
 vi neighbor[MAX];
 int bestlen=INF;
 vi bestlog;
@@ -122,6 +122,11 @@ void build() {
   }
   {
     // set time
+    char *tl = getenv("TIME_LIMIT");
+    if(tl != NULL) {
+      LIMIT = stod(tl);
+    }
+    cerr << "timelimit: " << LIMIT << endl;
     startt = clock();
     endt = startt + CLOCKS_PER_SEC*LIMIT;
   }

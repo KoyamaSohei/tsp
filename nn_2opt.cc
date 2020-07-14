@@ -175,10 +175,15 @@ void twoopt() {
   }
 }
 
-const double LIMIT=2.0;
+double LIMIT=2.0;
 
 int tspSolver() {
   build();
+  char *tl = getenv("TIME_LIMIT");
+  if(tl != NULL) {
+    LIMIT = stod(tl);
+  }
+  cerr << "timelimit: " << LIMIT << endl;
   const auto until_ck = clock() + CLOCKS_PER_SEC*LIMIT;
   while(clock() < until_ck) {
     twoopt();
