@@ -20,7 +20,6 @@ jobs:
         sudo apt install libboost-dev
         g++ util/export.cc -o export.out 
         bash ./random/eval.sh
-        bash ./util/evaluate.sh
     - name: Commit files
       run: |
         git config --local user.email "koyamaso0309@gmail.com"
