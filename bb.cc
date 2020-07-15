@@ -607,8 +607,6 @@ struct State {
   }
 };
 
-vi neighbor[MAX];
-
 // before: a -> b,c -> d
 //  after: a -> c,b -> d
 // => reverse b ... c
@@ -623,28 +621,25 @@ void flip(int ai,int bi,int ci,int di) {
   }
 }
 
-void twoopt() {
+bool twoopt() {
+  bool updated=false;
   rep(i,n) {
     int a = tour[i];
     int b = tour[(i+1)%n];
-    int c = neighbor[a][xor64()%sz(neighbor[a])];
-    if(b==c) continue;
-    int k;
     rep(j,n) {
-      if(tour[j]==c) {
-        k=j;
-        break;
+      int c=tour[j];
+      int d=tour[(j+1)%n];
+      if(a==c||b==c) continue;
+      if(b==d||a==d) continue;
+      int tmp = dist(a,b)+dist(c,d)-dist(a,c)-dist(b,d);
+      if(tmp>0) {
+        flip(i,(i+1)%n,j,(j+1)%n);
+        length-=tmp;
+        updated=true;
       }
     }
-    int d = tour[(k+1)%n];
-    if(b==d||a==d) continue;
-    int tmp = dist(a,b)+dist(c,d)-dist(a,c)-dist(b,d);
-    if(tmp>0) {
-      flip(i,(i+1)%n,k,(k+1)%n);
-      length-=tmp;
-      return;
-    }
   }
+  return updated;
 }
 
 // なるべくいい上界をきめる
@@ -724,10 +719,7 @@ void setupperbound() {
     tour[i]=route[i];
     length += dist(route[i],route[(i+1)%n]);
   }
-  const auto until_ck = clock() + CLOCKS_PER_SEC*0.5;
-  while(clock() < until_ck) {
-    twoopt();
-  }
+  while(twoopt());
 }
 
 State build() {
@@ -744,7 +736,6 @@ State build() {
       int id = nea.second;
       if(id==i) continue;
       neighbore.emplace_back(minmax(id,i));
-      neighbor[i].push_back(id);
     }
   }
   sort(rng(neighbore),[&](edge a,edge b) {
@@ -773,61 +764,9 @@ State build() {
   return state;
 }
 
-// for DEBUG
-void printMap(State &state) {
-  FILE *fp = fopen("bb.prog.svg","w");
-  if(fp==NULL) {
-    fprintf(stderr, "cannot open file!\n");
-    return;
-  }
-  double pad,r;
-  double xmin=INF,xmax=-INF,ymin=INF,ymax=-INF;
-  {
-    
-    rep(i,n) {
-      xmin = min(xmin,1.0*city[i][0]);
-      xmax = max(xmax,1.0*city[i][0]);
-      ymin = min(ymin,1.0*city[i][1]);
-      ymax = max(ymax,1.0*city[i][1]);
-    }
-    pad = max(xmax-xmin,ymax-ymin)*0.1;
-    r = min(xmax-xmin,ymax-ymin)/100;
-  }
-  fprintf(fp,"<svg viewBox=\"%f %f %f %f\" xmlns=\"http://www.w3.org/2000/svg\">\n",xmin-pad,ymin-pad,(xmax-xmin)+2*pad,(ymax-ymin)+2*pad);
-  rep(i,n) {
-    double x1=city[i][0];
-    double y1=city[i][1];
-    fprintf(fp,"  <circle cx=\"%f\" cy=\"%f\" r=\"%f\"/>\n",x1,y1,r);
-  }
-  for(int k:state.tn.required) {
-    double x1=city[state.tn.val[k].first][0];
-    double y1=city[state.tn.val[k].first][1];
-    double x2=city[state.tn.val[k].second][0];
-    double y2=city[state.tn.val[k].second][1];
-    fprintf(fp,"  <line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" stroke=\"red\" stroke-width=\"%f\" />\n",x1,y1,x2,y2,r);
-  }
-  for(int k:state.tn.used) {
-    double x1=city[state.tn.val[k].first][0];
-    double y1=city[state.tn.val[k].first][1];
-    double x2=city[state.tn.val[k].second][0];
-    double y2=city[state.tn.val[k].second][1];
-    fprintf(fp,"  <line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" stroke=\"black\" stroke-width=\"%f\" />\n",x1,y1,x2,y2,r);
-  }
-  fprintf(fp,"  <text x=\"%f\" y=\"%f\" font-size=\"%f\">lb: %d</text>\n",pad,pad,pad*0.5,state.lb);
-  fprintf(fp,"</svg>\n");
-  fclose(fp);
-}
 
 int tspSolver() {
   State state = build();
-  if(DEBUG) {
-    for(ll cnt=0;!state.log.empty();cnt++) {
-      state.exec();
-      if(cnt%1000000) continue;
-      printMap(state);
-    }
-    return 1;
-  }
   while(!state.log.empty()) {
     state.exec();
   }
