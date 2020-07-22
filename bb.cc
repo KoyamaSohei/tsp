@@ -154,7 +154,7 @@ struct TrackNeighbors {
   vi right;
   const ve val;
   int len;
-  // true -> 最小一木に使用,false->最小一木に使用されない
+  // true -> 最小一木に使用,false -> 最小一木に使用されない
   vector<bool> isused;
   // 現在のrequired
   set<int> required;
@@ -305,10 +305,10 @@ struct State {
       requireddims.dec(tn.val[k.idx].second);
     }
   }
-  // どうにかして頂点0につながる辺を取り除くと最小全域木になるように構築
-  // 頂点0につながる辺を2つとも取り除き、0以外の頂点の最小全域木を構築するようにする
+  // どうにかして頂点TARGETにつながる辺を取り除くと最小全域木になるように構築
+  // 頂点TARGETにつながる辺を2つとも取り除き、TARGET以外の頂点の最小全域木を構築するようにする
   // UFは新しく作る
-  // TODO: ufを 書き換える (うまくrequireddims[0]!=2のときにロールバックもする)
+  // TODO: ufを 書き換える (うまくrequireddims[TARGET]!=2のときにロールバックもする)
   bool lowerboundv2(StateLog &diff,int now) {
     UnionFindUndo uf2;
     int res=0;
@@ -378,13 +378,13 @@ struct State {
     requireddims.snapshot();
     // 最小一木の構築
     int res=rq;
-    // 頂点0に連結している辺の数
+    // 頂点TARGETに連結している辺の数
     int dim=requireddims.at(TARGET);
     // 2のとき、0をのぞく頂点の最小全域木を構築
     if(dim==2) {
       return lowerboundv2(diff,now);
     }
-    // 0より大きい時、頂点0を端点とする辺は最小全域木につかわない
+    // 0より大きい時、頂点TARGETを端点とする辺は最小全域木につかわない
     // 全て連結されるまで
     int rpos=sz(tn.right)-1;
     for(int pos=tn.right[0];pos<rpos;pos=tn.right[pos]) {
