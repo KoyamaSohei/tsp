@@ -1,8 +1,4 @@
 #include <bits/stdc++.h>
-#include <boost/geometry.hpp>
-#include <boost/geometry/geometries/point.hpp>
-#include <boost/geometry/geometries/box.hpp>
-#include <boost/geometry/index/rtree.hpp>
 #define MAX 20000
 #define rep(i,n) for(int i = 0; i < (n); ++i)
 #define drep(i,n) for(int i = (n)-1; i >= 0; --i)
@@ -22,14 +18,7 @@ typedef vector<set<int>> vs;
 typedef vector<edge> ve;
 const int INF = 1001001001;
 
-namespace bg = boost::geometry;
-namespace bgi = boost::geometry::index;
-typedef bg::model::point<float, 2, bg::cs::cartesian> point;
-
 #define DEBUG 0
-
-bgi::rtree<pair<point,unsigned>,bgi::quadratic<MAX>> rtree;
-typedef vector<pair<point,unsigned>> vp;
 
 extern int n, length, tour[MAX];
 extern float city[MAX][2];
@@ -154,7 +143,7 @@ struct TrackNeighbors {
   vi right;
   const ve val;
   int len;
-  // true -> 最小一木に使用,false->最小一木に使用されない
+  // true -> 最小一木に使用,false -> 最小一木に使用されない
   vector<bool> isused;
   // 現在のrequired
   set<int> required;
@@ -305,10 +294,10 @@ struct State {
       requireddims.dec(tn.val[k.idx].second);
     }
   }
-  // どうにかして頂点0につながる辺を取り除くと最小全域木になるように構築
-  // 頂点0につながる辺を2つとも取り除き、0以外の頂点の最小全域木を構築するようにする
+  // どうにかして頂点TARGETにつながる辺を取り除くと最小全域木になるように構築
+  // 頂点TARGETにつながる辺を2つとも取り除き、TARGET以外の頂点の最小全域木を構築するようにする
   // UFは新しく作る
-  // TODO: ufを 書き換える (うまくrequireddims[0]!=2のときにロールバックもする)
+  // TODO: ufを 書き換える (うまくrequireddims[TARGET]!=2のときにロールバックもする)
   bool lowerboundv2(StateLog &diff,int now) {
     UnionFindUndo uf2;
     int res=0;
@@ -378,13 +367,13 @@ struct State {
     requireddims.snapshot();
     // 最小一木の構築
     int res=rq;
-    // 頂点0に連結している辺の数
+    // 頂点TARGETに連結している辺の数
     int dim=requireddims.at(TARGET);
     // 2のとき、0をのぞく頂点の最小全域木を構築
     if(dim==2) {
       return lowerboundv2(diff,now);
     }
-    // 0より大きい時、頂点0を端点とする辺は最小全域木につかわない
+    // 0より大きい時、頂点TARGETを端点とする辺は最小全域木につかわない
     // 全て連結されるまで
     int rpos=sz(tn.right)-1;
     for(int pos=tn.right[0];pos<rpos;pos=tn.right[pos]) {
@@ -723,19 +712,10 @@ void setupperbound() {
 }
 
 State build() {
-  rep(i,n) {
-    point p(city[i][0],city[i][1]);
-    rtree.insert(make_pair(p,i));
-  }
   ve neighbore;
   rep(i,n) {
-    point p(city[i][0],city[i][1]);
-    vp dst;
-    rtree.query(bgi::nearest(p,int(10*log2(n))),back_inserter(dst));
-    for(auto nea:dst) {
-      int id = nea.second;
-      if(id==i) continue;
-      neighbore.emplace_back(minmax(id,i));
+    srep(j,i+1,n) {
+      neighbore.emplace_back(i,j);
     }
   }
   sort(rng(neighbore),[&](edge a,edge b) {
@@ -753,20 +733,16 @@ State build() {
   State state(neighbore);
   state.log.emplace(-INF,false,0);
   rep(i,n) {
-    state.availabledims.build(i,0);
+    state.availabledims.build(i,n-1);
     state.requireddims.build(i,0);
   }
-  for(edge e:neighbore) {
-    state.availabledims.inc(e.first);
-    state.availabledims.inc(e.second);
-  }
-  setupperbound();  
   return state;
 }
 
 
 int tspSolver() {
   State state = build();
+  setupperbound(); 
   while(!state.log.empty()) {
     state.exec();
   }
