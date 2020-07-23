@@ -70,6 +70,7 @@ typedef vector<pair<point,unsigned>> vp;
 UnionFind uf(MAX);
 
 vi neighbor[MAX];
+int pos[MAX];
 int bestlen=INF;
 vi bestlog;
 const int TL=20;
@@ -162,6 +163,12 @@ void build() {
       }
     }
   }
+  {
+    // build pos
+    rep(i,n) {
+      pos[tour[i]]=i;
+    }
+  }
 }
 
 // before: a -> b,c -> d
@@ -174,6 +181,7 @@ void flip(int ai,int bi,int ci,int di) {
   }
   for(int p=bi;p!=di;p=(p+1)%n) {
     tour[p]=st.top();
+    pos[tour[p]]=p;
     st.pop();
   }
 }
@@ -190,13 +198,7 @@ void tabu() {
         lifetime[a]--;
         continue;
       }
-      int ci;
-      rep(k,n) {
-        if(tour[k]==c) {
-          ci=k;
-          break;
-        }
-      }
+      int ci = pos[c];
       int d = tour[(ci+1)%n];
       int s = dist(a,b)+dist(c,d)-dist(a,c)-dist(b,d);
       if(s>score) {

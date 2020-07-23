@@ -85,6 +85,7 @@ int getNextPoint(int k) {
 }
 
 vi neighbor[MAX];
+int pos[MAX];
 
 // 初期解をNearest Neighbor法で構築
 // 未訪問の近傍の都市を求めるために、Rtreeを用いることで、計算量を落とした
@@ -128,6 +129,12 @@ void build() {
       }
     }
   }
+  {
+    // build pos
+    rep(i,n) {
+      pos[tour[i]]=i;
+    }
+  }
 }
 
 // before: a -> b,c -> d
@@ -140,6 +147,7 @@ void flip(int ai,int bi,int ci,int di) {
   }
   for(int p=bi;p!=di;p=(p+1)%n) {
     tour[p]=st.top();
+    pos[tour[p]]=p;
     st.pop();
   }
 }
@@ -157,6 +165,7 @@ void shift(int a,int b,int t) {
   }
   rep(i,n) {
     tour[i]=que.front();
+    pos[tour[i]]=i;
     que.pop();
   }
 }
@@ -169,13 +178,7 @@ bool combopt() {
     for(int c:neighbor[a]) {
       if(b==c) continue;
       // 2opt
-      int k;
-      rep(j,n) {
-        if(tour[j]==c) {
-          k=j;
-          break;
-        }
-      }
+      int k = pos[c];
       int d = tour[(k+1)%n];
       if(b==d||a==d) continue;
       int tmp = dist(a,b)+dist(c,d)-dist(a,c)-dist(b,d);

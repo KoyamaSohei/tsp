@@ -80,6 +80,7 @@ bgi::rtree<pair<point,unsigned>,bgi::quadratic<MAX>> rtree;
 typedef vector<pair<point,unsigned>> vp;
 
 vi neighbor[MAX];
+int pos[MAX];
 int bestlen=INF;
 vi bestlog;
 
@@ -196,6 +197,12 @@ void build() {
       }
     }
   }
+  {
+    // build pos
+    rep(i,n) {
+      pos[tour[i]]=i;
+    }
+  }
 }
 
 // before: a -> b,c -> d
@@ -208,6 +215,7 @@ void flip(int ai,int bi,int ci,int di) {
   }
   for(int p=bi;p!=di;p=(p+1)%n) {
     tour[p]=st.top();
+    pos[tour[p]]=p;
     st.pop();
   }
 }
@@ -227,11 +235,13 @@ const int tsteps = 60;
 
 
 int init_tour[MAX];
+int init_pos[MAX];
 int init_length;
 
 // 温度tで何回2-optでswapされる回数/step数を返す
 double exec(double t) {
   memcpy(tour,init_tour, sizeof(init_tour));
+  memcpy(pos,init_pos, sizeof(init_pos));
   length=init_length;
   int imp=0;
   for(int i=0,cnt=0;cnt<steps;i=(i+1)%n) {
@@ -240,13 +250,7 @@ double exec(double t) {
     for(int c:neighbor[a]) {
       if(b==c) continue;
       if(cnt>=steps) break;
-      int k;
-      rep(j,n) {
-        if(tour[j]==c) {
-          k=j;
-          break;
-        }
-      }
+      int k = pos[c];
       int d = tour[(k+1)%n];
       if(b==d||a==d) continue;
       cnt++;
@@ -272,6 +276,7 @@ double exec(double t) {
 void setParam() {
   // 最適なTmax,Tminを調べる
   memcpy(init_tour,tour, sizeof(tour));
+  memcpy(init_pos,pos, sizeof(pos));
   init_length=length;
   {
     // find Tmax
@@ -306,6 +311,7 @@ void setParam() {
   delta = exp(log(tmin/tmax)/tsteps);
   cerr << delta << endl;
   memcpy(init_tour,tour, sizeof(tour));
+  memcpy(init_pos,pos, sizeof(pos));
   init_length=length;
 }
 
@@ -317,13 +323,7 @@ void sa() {
       for(int c:neighbor[a]) {
         if(b==c) continue;
         if(step>=steps) break;
-        int k;
-        rep(j,n) {
-          if(tour[j]==c) {
-            k=j;
-            break;
-          }
-        }
+        int k = pos[c];
         int d = tour[(k+1)%n];
         if(b==d||a==d) continue;
         step++;
