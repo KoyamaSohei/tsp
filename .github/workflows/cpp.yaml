@@ -19,6 +19,7 @@ jobs:
         cd ../
         sudo apt install libboost-dev
         g++ util/export.cc -o export.out 
+        bash ./util/evaluate.sh
         bash ./random/eval.sh
     - name: Commit files
       run: |

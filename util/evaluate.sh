@@ -18,7 +18,7 @@ do
     for k in "${c[@]}"
     do
       echo "build: ${i} improve: ${j} target: ${k}"
-      eval "time ./${i}_${j}.out -n -c lib/${k}.tsp | ./export.out > dist/${k}.${i}_${j}.${l}s.svg"
+      eval "time ./${i}_${j}.out -n -c lib/${k}.tsp | ./export.out > dist/${k}.${i}_${j}.svg"
       sleep 3
     done
   done
