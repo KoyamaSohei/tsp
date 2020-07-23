@@ -30,13 +30,6 @@ extern void showCTour(int *tou, int wai, int *color);
 extern void showString(char *str);
 extern void showLength(int leng);
 
-int xor64() {
-  static uint64_t x = 88172645463325252ULL;
-  x = x ^ (x << 13); x = x ^ (x >> 7);
-  x = x ^ (x << 17);
-  return abs(int(x));
-}
-
 int dist(int i, int j) {
   float xd = city[i][0] - city[j][0];
   float yd = city[i][1] - city[j][1];
@@ -74,6 +67,7 @@ bgi::rtree<pair<point,unsigned>,bgi::quadratic<MAX>> rtree;
 typedef vector<pair<point,unsigned>> vp;
 
 vi neighbor[MAX];
+int pos[MAX];
 
 UnionFind uf(MAX);
 
@@ -144,6 +138,12 @@ void build() {
       }
     }
   }
+  {
+    // build pos
+    rep(i,n) {
+      pos[tour[i]]=i;
+    }
+  }
 }
 
 // before: a -> b,c -> d
@@ -156,6 +156,7 @@ void flip(int ai,int bi,int ci,int di) {
   }
   for(int p=bi;p!=di;p=(p+1)%n) {
     tour[p]=st.top();
+    pos[tour[p]]=p;
     st.pop();
   }
 }
@@ -173,56 +174,46 @@ void shift(int a,int b,int t) {
   }
   rep(i,n) {
     tour[i]=que.front();
+    pos[tour[i]]=i;
     que.pop();
   }
 }
 
-void combopt() {
+bool combopt() {
+  bool updated=false;
   rep(i,n) {
     int a = tour[i];
     int b = tour[(i+1)%n];
-    int c = neighbor[a][xor64()%sz(neighbor[a])];
-    if(b==c) continue;
-    // 2opt
-    int k;
-    rep(j,n) {
-      if(tour[j]==c) {
-        k=j;
+    for(int c:neighbor[a]) {
+      if(b==c) continue;
+      // 2opt
+      int k = pos[c];
+      int d = tour[(k+1)%n];
+      if(b==d||a==d) continue;
+      int tmp = dist(a,b)+dist(c,d)-dist(a,c)-dist(b,d);
+      if(tmp>0) {
+        flip(i,(i+1)%n,k,(k+1)%n);
+        length-=tmp;
+        updated=true;
+        break;
+      }
+      // 1.5opt
+      int e = tour[(i+2)%n];
+      if(e==c||e==d) continue;
+      tmp = dist(a,b)+dist(b,e)+dist(c,d)-(dist(a,e)+dist(b,c)+dist(b,d));
+      if(tmp>0) {
+        shift(c,d,b);
+        length-=tmp;
+        updated=true;
         break;
       }
     }
-    int d = tour[(k+1)%n];
-    if(b==d||a==d) continue;
-    int tmp = dist(a,b)+dist(c,d)-dist(a,c)-dist(b,d);
-    if(tmp>0) {
-      flip(i,(i+1)%n,k,(k+1)%n);
-      length-=tmp;
-      return;
-    }
-    // 1.5 opt
-    int e = tour[(i+2)%n];
-    if(e==c||e==d) continue;
-    tmp = dist(a,b)+dist(b,e)+dist(c,d)-(dist(a,e)+dist(b,c)+dist(b,d));
-    if(tmp>0) {
-      shift(c,d,b);
-      length-=tmp;
-      return;
-    }
   }
+  return updated;
 }
-
-double LIMIT=2.0;
 
 int tspSolver() {
   build();
-  char *tl = getenv("TIME_LIMIT");
-  if(tl != NULL) {
-    LIMIT = stod(tl);
-  }
-  cerr << "timelimit: " << LIMIT << endl;
-  const auto until_ck = clock() + CLOCKS_PER_SEC*LIMIT;
-  while(clock() < until_ck) {
-    combopt();
-  }
+  while(combopt());
   return 1;
 }

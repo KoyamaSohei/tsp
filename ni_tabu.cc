@@ -30,13 +30,6 @@ extern void showCTour(int *tou, int wai, int *color);
 extern void showString(char *str);
 extern void showLength(int leng);
 
-int xor64() {
-  static uint64_t x = 88172645463325252ULL;
-  x = x ^ (x << 13); x = x ^ (x >> 7);
-  x = x ^ (x << 17);
-  return abs(int(x));
-}
-
 int dist(int i, int j) {
   float xd = city[i][0] - city[j][0];
   float yd = city[i][1] - city[j][1];
@@ -82,11 +75,10 @@ struct RMQ {
 bgi::rtree<pair<point,unsigned>,bgi::quadratic<MAX>> rtree;
 typedef vector<pair<point,unsigned>> vp;
 
-double LIMIT=2.0;
 vi neighbor[MAX];
+int pos[MAX];
 int bestlen=INF;
 vi bestlog;
-clock_t startt,endt;
 const int TL=20;
 
 void snapshot() {
@@ -209,14 +201,10 @@ void build() {
     }
   }
   {
-    // set time
-    char *tl = getenv("TIME_LIMIT");
-    if(tl != NULL) {
-      LIMIT = stod(tl);
+    // build pos
+    rep(i,n) {
+      pos[tour[i]]=i;
     }
-    cerr << "timelimit: " << LIMIT << endl;
-    startt = clock();
-    endt = startt + CLOCKS_PER_SEC*LIMIT;
   }
 }
 
@@ -230,28 +218,24 @@ void flip(int ai,int bi,int ci,int di) {
   }
   for(int p=bi;p!=di;p=(p+1)%n) {
     tour[p]=st.top();
+    pos[tour[p]]=p;
     st.pop();
   }
 }
 
-int cnt = 0;
-
 void tabu() {
   rep(i,n) {
     int a = tour[i];
-    if(lifetime[a]) continue;
+    if(lifetime[a]) {
+      lifetime[a]--;
+      continue;
+    }
     int b = tour[(i+1)%n];
     int score=-INF,pi=-INF;
     for(int c:neighbor[a]) {
       if(b==c) continue;
       if(lifetime[c]) continue;
-      int ci;
-      rep(k,n) {
-        if(tour[k]==c) {
-          ci=k;
-          break;
-        }
-      }
+      int ci = pos[c];
       int d = tour[(ci+1)%n];
       int s = dist(a,b)+dist(c,d)-dist(a,c)-dist(b,d);
       if(s>score) {
@@ -270,14 +254,9 @@ void tabu() {
 
 int tspSolver() {
   build();
-  while(clock() < endt) {
+  rep(tryi,10*log(n)) {
     tabu();
     snapshot();
-    rep(i,n) {
-      if(lifetime[i]) {
-        lifetime[i]--;
-      }
-    }
   }
   length = bestlen;
   rep(i,n) {
