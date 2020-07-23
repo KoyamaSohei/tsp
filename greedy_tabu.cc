@@ -217,7 +217,7 @@ void tabu() {
 
 int tspSolver() {
   build();
-  rep(tryi,n) {
+  rep(tryi,10*log(n)) {
     tabu();
     snapshot();
   }
