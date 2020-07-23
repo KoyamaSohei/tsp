@@ -30,13 +30,6 @@ extern void showCTour(int *tou, int wai, int *color);
 extern void showString(char *str);
 extern void showLength(int leng);
 
-int xor64() {
-  static uint64_t x = 88172645463325252ULL;
-  x = x ^ (x << 13); x = x ^ (x >> 7);
-  x = x ^ (x << 17);
-  return abs(int(x));
-}
-
 int dist(int i, int j) {
   float xd = city[i][0] - city[j][0];
   float yd = city[i][1] - city[j][1];
@@ -94,11 +87,9 @@ int getNextPoint(int k) {
   return -1;
 }
 
-double LIMIT=2.0;
 vi neighbor[MAX];
 int bestlen=INF;
 vi bestlog;
-clock_t startt,endt;
 const int TL=20;
 
 void snapshot() {
@@ -164,16 +155,6 @@ void build() {
       }
     }
   }
-  {
-    // set time
-    char *tl = getenv("TIME_LIMIT");
-    if(tl != NULL) {
-      LIMIT = stod(tl);
-    }
-    cerr << "timelimit: " << LIMIT << endl;
-    startt = clock();
-    endt = startt + CLOCKS_PER_SEC*LIMIT;
-  }
 }
 
 // before: a -> b,c -> d
@@ -190,12 +171,13 @@ void flip(int ai,int bi,int ci,int di) {
   }
 }
 
-int cnt = 0;
-
 void tabu() {
   rep(i,n) {
     int a = tour[i];
-    if(lifetime[a]) continue;
+    if(lifetime[a]) {
+      lifetime[a]--;
+      continue;
+    }
     int b = tour[(i+1)%n];
     int score=-INF,pi=-INF;
     for(int c:neighbor[a]) {
@@ -226,14 +208,9 @@ void tabu() {
 
 int tspSolver() {
   build();
-  while(clock() < endt) {
+  rep(tryi,n) {
     tabu();
     snapshot();
-    rep(i,n) {
-      if(lifetime[i]) {
-        lifetime[i]--;
-      }
-    }
   }
   length = bestlen;
   rep(i,n) {

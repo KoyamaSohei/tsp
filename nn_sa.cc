@@ -90,12 +90,10 @@ int getNextPoint(int k) {
   }
   return -1;
 }
-double LIMIT=2.0;
+
 vi neighbor[MAX];
 int bestlen=INF;
 vi bestlog;
-clock_t startt,endt;
-double temperature = 50.0;
 
 void snapshot() {
   if(bestlen>length) {
@@ -154,16 +152,6 @@ void build() {
       }
     }
   }
-  {
-    // set time
-    char *tl = getenv("TIME_LIMIT");
-    if(tl != NULL) {
-      LIMIT = stod(tl);
-    }
-    cerr << "timelimit: " << LIMIT << endl;
-    startt = clock();
-    endt = startt + CLOCKS_PER_SEC*LIMIT;
-  }
 }
 
 // before: a -> b,c -> d
@@ -180,55 +168,143 @@ void flip(int ai,int bi,int ci,int di) {
   }
 }
 
-bool moveNext(int tmp) {
-  clock_t now = clock();
-  double x = double(xor64()%10000)/10000;
-  double y = exp(double(tmp)/temperature);
+bool moveNext(int tmp,double t) {
+  double x = double(abs(xor64())%10000)/10000;
+  double y = exp(double(tmp)/t);
   return x<y;
 }
 
-int cnt = 0;
+double tmax = 500.0;
+double tmin = 1e-5;
+double delta = 0.1;
+const double maxrate = 0.98;
+const int steps = 100000;
+const int tsteps = 60;
 
-void sa() {
-  int x = xor64()%n;
-  int a = tour[x];
-  int b = tour[(x+1)%n];
-  int c = neighbor[a][xor64()%sz(neighbor[a])];
-  if(b==c) return;
-  int k;
-  rep(j,n) {
-    if(tour[j]==c) {
-      k=j;
+
+int init_tour[MAX];
+int init_length;
+
+// 温度tで何回2-optでswapされる回数/step数を返す
+double exec(double t) {
+  memcpy(tour,init_tour, sizeof(init_tour));
+  length=init_length;
+  int imp=0;
+  for(int i=0,cnt=0;cnt<steps;i=(i+1)%n) {
+    int a = tour[i];
+    int b = tour[(i+1)%n];
+    for(int c:neighbor[a]) {
+      if(b==c) continue;
+      if(cnt>=steps) break;
+      int k;
+      rep(j,n) {
+        if(tour[j]==c) {
+          k=j;
+          break;
+        }
+      }
+      int d = tour[(k+1)%n];
+      if(b==d||a==d) continue;
+      cnt++;
+      int tmp = dist(a,b)+dist(c,d)-dist(a,c)-dist(b,d);
+      if(tmp>0) {
+        flip(i,(i+1)%n,k,(k+1)%n);
+        length-=tmp;
+        imp++;
+        break;
+      }
+      if(!moveNext(tmp,t)) {
+        continue;
+      }
+      flip(i,(i+1)%n,k,(k+1)%n);
+      length-=tmp;
+      imp++;
       break;
     }
   }
-  int d = tour[(k+1)%n];
-  if(b==d||a==d) return;
-  int tmp = dist(a,b)+dist(c,d)-dist(a,c)-dist(b,d);
-  if(tmp>0) {
-    flip(x,(x+1)%n,k,(k+1)%n);
-    length-=tmp;
-    cnt--;
-    return;
+  return double(imp)/steps;
+}
+
+void setParam() {
+  // 最適なTmax,Tminを調べる
+  memcpy(init_tour,tour, sizeof(tour));
+  init_length=length;
+  {
+    // find Tmax
+    double lt=0,rt=INF;
+    rep(tryi,30) {
+      double m = (lt+rt)/2;
+      double rate = exec(m);
+      if(rate<maxrate) {
+        lt=m;
+      } else {
+        rt=m;
+      }
+    }
+    cerr << lt << endl;
+    tmax=lt;
   }
-  cnt++;
-  if(!moveNext(tmp)) {
-    return;
+  {
+    // find Tmin
+    double lt=1e-5,rt=tmax;
+    rep(tryi,10) {
+      double m = (lt+rt)/2;
+      double rate = exec(m);
+      if(rate<0) {
+        lt=m;
+      } else {
+        rt=m;
+      }
+    }
+    cerr << lt << endl;
+    tmin=lt;
   }
-  flip(x,(x+1)%n,k,(k+1)%n);
-  length-=tmp;
+  delta = exp(log(tmin/tmax)/tsteps);
+  cerr << delta << endl;
+  memcpy(init_tour,tour, sizeof(tour));
+  init_length=length;
+}
+
+void sa() {
+  for(double t=tmax;t>tmin;t*=delta) {
+    for(int i=0,step=0;step<steps;i=(i+1)%n) {
+      int a = tour[i];
+      int b = tour[(i+1)%n];
+      for(int c:neighbor[a]) {
+        if(b==c) continue;
+        if(step>=steps) break;
+        int k;
+        rep(j,n) {
+          if(tour[j]==c) {
+            k=j;
+            break;
+          }
+        }
+        int d = tour[(k+1)%n];
+        if(b==d||a==d) continue;
+        step++;
+        int tmp = dist(a,b)+dist(c,d)-dist(a,c)-dist(b,d);
+        if(tmp>0) {
+          flip(i,(i+1)%n,k,(k+1)%n);
+          length-=tmp;
+          snapshot();
+          break;
+        }
+        if(!moveNext(tmp,t)) {
+          continue;
+        }
+        flip(i,(i+1)%n,k,(k+1)%n);
+        length-=tmp;
+        break;
+      }
+    }
+  }
 }
 
 int tspSolver() {
   build();
-  while(clock() < endt) {
-    sa();
-    snapshot();
-    if(cnt>CLOCKS_PER_SEC*0.0001) {
-      temperature *= 0.4;
-      cnt = 0;
-    }
-  }
+  setParam();
+  sa();
   length = bestlen;
   rep(i,n) {
     tour[i]=bestlog[i];
