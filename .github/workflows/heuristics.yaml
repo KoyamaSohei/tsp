@@ -1,4 +1,4 @@
-name: eval
+name: eval_heuristics
 
 on: [pull_request]
 
