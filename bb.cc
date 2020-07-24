@@ -625,6 +625,7 @@ bool twoopt() {
         flip(i,(i+1)%n,j,(j+1)%n);
         length-=tmp;
         updated=true;
+        break;
       }
     }
   }
