@@ -13,8 +13,8 @@ for i in "${a[@]}"
 do
   for j in "${b[@]}"
   do
-    echo "build ${i}_${j}.cc"
-    eval "g++ -O2 -I/usr/include/X11/ -L/usr/lib/ -lX11 -lm util/tspShow.c ${i}_${j}.cc -o ${i}_${j}.out"
+    echo "build ${i}_${j}.out"
+    eval "g++ -O2 -I/usr/include/X11/ -L/usr/lib/ -lX11 -lm util/tspShow.c -lm build/${i}.cc improve/${j}.cc bootstrap.cc heuristics.cc -o ${i}_${j}.out"
     for k in "${c[@]}"
     do
       echo "build: ${i} improve: ${j} target: ${k}"
