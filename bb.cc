@@ -248,6 +248,9 @@ struct State {
   // 状態
   UnionFindUndo uf;
   TrackNeighbors tn;
+  // ufから頂点TARGETを端点とした辺を除いたもの
+  // lowerboundv2で使う
+  UnionFindUndo uf2;
   // dfsに使うログ
   stack<DfsLog> log;
   // rollbackに使うログ
@@ -272,11 +275,16 @@ struct State {
       TrackNeighborsLog x(k.idx);
       tn.disable(x);
       diff.tnlog.push(x);
-      uf.unite(tn.val[k.idx].first,tn.val[k.idx].second);
+      int a = tn.val[k.idx].first;
+      int b = tn.val[k.idx].second;
+      uf.unite(a,b);
+      if(a!=TARGET&&b!=TARGET) {
+        uf2.unite(a,b);
+      }
       tn.required.insert(k.idx);
-      rq += dist(tn.val[k.idx].first,tn.val[k.idx].second);
-      requireddims.inc(tn.val[k.idx].first);
-      requireddims.inc(tn.val[k.idx].second);
+      rq += dist(a,b);
+      requireddims.inc(a);
+      requireddims.inc(b);
     }
   }
   // 遷移のロールバック
@@ -286,27 +294,25 @@ struct State {
       availabledims.inc(tn.val[k.idx].second);
       tn.rollback(k.tnlog);
     } else {
-      uf.undo();
       tn.rollback(k.tnlog);
       tn.required.erase(k.idx);
-      rq -= dist(tn.val[k.idx].first,tn.val[k.idx].second);
-      requireddims.dec(tn.val[k.idx].first);
-      requireddims.dec(tn.val[k.idx].second);
+      int a = tn.val[k.idx].first;
+      int b = tn.val[k.idx].second;
+      uf.undo();
+      if(a!=TARGET&&b!=TARGET) {
+        uf2.undo();
+      }
+      rq -= dist(a,b);
+      requireddims.dec(a);
+      requireddims.dec(b);
     }
   }
   // どうにかして頂点TARGETにつながる辺を取り除くと最小全域木になるように構築
   // 頂点TARGETにつながる辺を2つとも取り除き、TARGET以外の頂点の最小全域木を構築するようにする
-  // UFは新しく作る
-  // TODO: ufを 書き換える (うまくrequireddims[TARGET]!=2のときにロールバックもする)
-  bool lowerboundv2(StateLog &diff,int now) {
-    UnionFindUndo uf2;
-    int res=0;
-    for(int p: tn.required) {
-      res += dist(tn.val[p].first,tn.val[p].second);
-      if(tn.val[p].first==TARGET) continue;
-      if(tn.val[p].second==TARGET) continue;
-      uf2.unite(tn.val[p].first,tn.val[p].second);
-    }
+  bool lowerboundv2(StateLog &diff) {
+    int res=rq;
+    int now = sz(uf.history);
+    int now2 = sz(uf2.history);
     int rpos=sz(tn.right)-1;
     for(int pos=tn.right[0];pos<rpos;pos=tn.right[pos]) {
       int a =tn.val[pos-1].first;
@@ -348,6 +354,9 @@ struct State {
       while(sz(uf.history)>now) {
         uf.undo();
       }
+      while(sz(uf2.history)>now2) {
+        uf2.undo();
+      }
       lb=INF;
       requireddims.undo();
       return false;
@@ -357,6 +366,9 @@ struct State {
     // 復元
     while(sz(uf.history)>now) {
       uf.undo();
+    }
+    while(sz(uf2.history)>now2) {
+      uf2.undo();
     }
     requireddims.undo();
     return isvalid;
@@ -371,7 +383,7 @@ struct State {
     int dim=requireddims.at(TARGET);
     // 2のとき、0をのぞく頂点の最小全域木を構築
     if(dim==2) {
-      return lowerboundv2(diff,now);
+      return lowerboundv2(diff);
     }
     // 0より大きい時、頂点TARGETを端点とする辺は最小全域木につかわない
     // 全て連結されるまで
