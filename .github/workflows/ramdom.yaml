@@ -13,13 +13,8 @@ jobs:
         ref: ${{ github.event.pull_request.head.ref }}
     - name: Update dist
       run: |
-        mkdir lib && cd lib
-        wget http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/ALL_tsp.tar.gz
-        tar -zxvf ALL_tsp.tar.gz
-        cd ../
         sudo apt install libboost-dev
         g++ util/export.cc -o export.out 
-        bash ./util/evaluate.sh
         bash ./random/eval.sh
     - name: Commit files
       run: |
