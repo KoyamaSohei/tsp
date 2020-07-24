@@ -471,42 +471,44 @@ struct State {
   // この辺を禁止した場合構築できなくなるとき、禁止不可能
   bool canForbidden(int k) {
     int a = tn.val[k].first;
-    if(availabledims.at(a)==2) return false;
     int b = tn.val[k].second;
+    if(availabledims.at(a)==2) return false;
     if(availabledims.at(b)==2) return false;
     return true;
   }
   // この辺が接続する頂点の次数が既に2だったとき、使用不可能
+  // この辺によって巡回路にならない閉路が出来るとき、使用不可能
   bool canUse(int k) {
-    if(requireddims.at(tn.val[k].first)>=2) return false;
-    if(requireddims.at(tn.val[k].second)>=2) return false;
+    int a = tn.val[k].first;
+    int b = tn.val[k].second;
+    if(requireddims.at(a)>=2) return false;
+    if(requireddims.at(b)>=2) return false;
+    if(uf.find(a)==uf.find(b)&&uf.size(a)!=n) return false;
     return true;
   }
   int selectedge() {
-    // 使用遷移のみ可能
-    int usepos=-INF;
+    // 禁止遷移のみ可能
+    int fpos=-INF;
     // 使用遷移かつ禁止遷移が可能
     int avapos=-INF;
-    // 1. 禁止遷移のみ可能な辺を返す
-    // 2. 使用遷移のみ可能な辺を返す
+    // 1. 使用遷移のみ可能な辺を返す
+    // 2. 禁止遷移のみ可能な辺を返す
     // 3. 遷移可能な辺を返す
     // 各優先順位で複数の辺があった場合最もコストが大きいものを優先する
     for(int pos=tn.left.back();pos>0;pos=tn.left[pos]) {
       if(tn.isused[pos]) continue;
       bool f = canForbidden(pos-1);
       bool u = canUse(pos-1);
-      if(f&&!u) {
+      if(!f&&u) {
         return pos-1;
       }
-      if(!f&&u) {
-        chmax(usepos,pos-1);
+      if(f&&!u) {
+        chmax(fpos,pos-1);
       }
-      if(f&&u) {
-        chmax(avapos,pos-1);
-      }
+      chmax(avapos,pos-1);
     }
-    if(usepos>=0) {
-      return usepos;
+    if(fpos>=0) {
+      return fpos;
     }
     if(avapos>=0) {
       return avapos;
