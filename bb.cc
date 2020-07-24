@@ -468,25 +468,33 @@ struct State {
     return true;
   }
   int selectedge() {
-    // 禁止遷移のみ可能な辺を返す
+    // 使用遷移のみ可能
+    int usepos=-INF;
+    // 使用遷移かつ禁止遷移が可能
+    int avapos=-INF;
+    // 1. 禁止遷移のみ可能な辺を返す
+    // 2. 使用遷移のみ可能な辺を返す
+    // 3. 遷移可能な辺を返す
+    // 各優先順位で複数の辺があった場合最もコストが大きいものを優先する
     for(int pos=tn.left.back();pos>0;pos=tn.left[pos]) {
       if(tn.isused[pos]) continue;
-      if(!canForbidden(pos-1)) continue;
-      if(canUse(pos-1)) continue;
-      return pos-1;
+      bool f = canForbidden(pos-1);
+      bool u = canUse(pos-1);
+      if(f&&!u) {
+        return pos-1;
+      }
+      if(!f&&u) {
+        chmax(usepos,pos-1);
+      }
+      if(f&&u) {
+        chmax(avapos,pos-1);
+      }
     }
-    // 使用遷移のみ可能な辺を返す
-    for(int pos=tn.left.back();pos>0;pos=tn.left[pos]) {
-      if(tn.isused[pos]) continue;
-      if(canForbidden(pos-1)) continue;
-      if(!canUse(pos-1)) continue;
-      return pos-1;
+    if(usepos>=0) {
+      return usepos;
     }
-    // 遷移可能な辺を返す
-    for(int pos=tn.left.back();pos>0;pos=tn.left[pos]) {
-      if(tn.isused[pos]) continue;
-      if(!canForbidden(pos-1)&&!canUse(pos-1)) continue;
-      return pos-1;
+    if(avapos>=0) {
+      return avapos;
     }
     return -INF;
   }
