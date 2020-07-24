@@ -21,7 +21,7 @@ jobs:
         git config --local user.email "koyamaso0309@gmail.com"
         git config --local user.name "KoyamaSohei"
         git add .
-        git commit -m "update: dist"
+        git commit -m "update: dist(random)"
     - name: Push changes
       uses: ad-m/github-push-action@master
       with:
