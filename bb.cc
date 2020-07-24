@@ -635,32 +635,142 @@ void flip(int ai,int bi,int ci,int di) {
   }
 }
 
-bool twoopt() {
-  bool updated=false;
-  rep(i,n) {
+int bestlen=INF;
+vi bestlog;
+
+void snapshot() {
+  if(bestlen>length) {
+    chmin(bestlen,length);
+    bestlog.resize(n);
+    rep(i,n) {
+      bestlog[i]=tour[i];
+    }
+  }
+}
+
+bool moveNext(int tmp,double t) {
+  double x = double(xor64()%10000)/10000;
+  double y = exp(double(tmp)/t);
+  return x<y;
+}
+
+
+double tmax = 500.0;
+double tmin = 1e-5;
+double delta = 0.1;
+const double maxrate = 0.98;
+const int steps = 100000;
+const int tsteps = 60;
+
+int init_tour[MAX];
+int init_pos[MAX];
+int init_length;
+
+// 温度tで何回2-optでswapされる回数/step数を返す
+double exec(double t) {
+  memcpy(tour,init_tour, sizeof(init_tour));
+  length=init_length;
+  int imp=0;
+  for(int i=0,cnt=0;cnt<steps;i=(i+1)%n) {
     int a = tour[i];
     int b = tour[(i+1)%n];
-    rep(j,n) {
-      int c=tour[j];
-      int d=tour[(j+1)%n];
-      if(a==c||b==c) continue;
+    rep(k,n) {
+      int c = tour[k];
+      if(b==c) continue;
+      if(cnt>=steps) break;
+      int d = tour[(k+1)%n];
       if(b==d||a==d) continue;
+      cnt++;
       int tmp = dist(a,b)+dist(c,d)-dist(a,c)-dist(b,d);
       if(tmp>0) {
-        flip(i,(i+1)%n,j,(j+1)%n);
+        flip(i,(i+1)%n,k,(k+1)%n);
         length-=tmp;
-        updated=true;
+        imp++;
+        break;
+      }
+      if(!moveNext(tmp,t)) {
+        continue;
+      }
+      flip(i,(i+1)%n,k,(k+1)%n);
+      length-=tmp;
+      imp++;
+      break;
+    }
+  }
+  return double(imp)/steps;
+}
+
+void setParam() {
+  // 最適なTmax,Tminを調べる
+  memcpy(init_tour,tour, sizeof(tour));
+  init_length=length;
+  {
+    // find Tmax
+    double lt=0,rt=INF;
+    rep(tryi,30) {
+      double m = (lt+rt)/2;
+      double rate = exec(m);
+      if(rate<maxrate) {
+        lt=m;
+      } else {
+        rt=m;
+      }
+    }
+    cerr << lt << endl;
+    tmax=lt;
+  }
+  {
+    // find Tmin
+    double lt=1e-5,rt=tmax;
+    rep(tryi,10) {
+      double m = (lt+rt)/2;
+      double rate = exec(m);
+      if(rate<0) {
+        lt=m;
+      } else {
+        rt=m;
+      }
+    }
+    cerr << lt << endl;
+    tmin=lt;
+  }
+  delta = exp(log(tmin/tmax)/tsteps);
+  cerr << delta << endl;
+  memcpy(init_tour,tour, sizeof(tour));
+  init_length=length;
+}
+
+void sa() {
+  for(double t=tmax;t>tmin;t*=delta) {
+    for(int i=0,step=0;step<steps;i=(i+1)%n) {
+      int a = tour[i];
+      int b = tour[(i+1)%n];
+      rep(k,n) {
+        int c = tour[k];
+        if(b==c) continue;
+        if(step>=steps) break;
+        int d = tour[(k+1)%n];
+        if(b==d||a==d) continue;
+        step++;
+        int tmp = dist(a,b)+dist(c,d)-dist(a,c)-dist(b,d);
+        if(tmp>0) {
+          flip(i,(i+1)%n,k,(k+1)%n);
+          length-=tmp;
+          snapshot();
+          break;
+        }
+        if(!moveNext(tmp,t)) {
+          continue;
+        }
+        flip(i,(i+1)%n,k,(k+1)%n);
+        length-=tmp;
         break;
       }
     }
   }
-  return updated;
 }
 
-// なるべくいい上界をきめる
-// FI / 2optをそのまま使う
-void setupperbound() {
-  // build initial path
+void buildFI() {
   vector<set<int>> G(n);
   // 巡回路に含まれる頂点集合x,その補集合y
   set<int> x,y;
@@ -734,7 +844,19 @@ void setupperbound() {
     tour[i]=route[i];
     length += dist(route[i],route[(i+1)%n]);
   }
-  while(twoopt());
+}
+
+// なるべくいい上界をきめる
+// FI / SA をそのまま使う
+void setupperbound() {
+  buildFI();
+  snapshot();
+  setParam();
+  sa();
+  length = bestlen;
+  rep(i,n) {
+    tour[i]=bestlog[i];
+  }
 }
 
 State build() {
@@ -769,6 +891,7 @@ State build() {
 int tspSolver() {
   State state = build();
   setupperbound(); 
+  cerr << "init length = " << length << endl;
   while(!state.log.empty()) {
     state.exec();
   }
