@@ -78,7 +78,7 @@ struct RMQUndo {
     int rl = _query(a,b,idx*2+2,(l+r)/2,r);
     return min(vl,rl);
   }
-  // min(A[i] | 0 <= i < x)
+  // min(A[i] | 0 <= i < n)
   int query() {
     return _query(0,n,0,0,N);
   }
@@ -248,6 +248,9 @@ struct State {
   // 状態
   UnionFindUndo uf;
   TrackNeighbors tn;
+  // ufから頂点TARGETを端点とした辺を除いたもの
+  // lowerboundv2で使う
+  UnionFindUndo uf2;
   // dfsに使うログ
   stack<DfsLog> log;
   // rollbackに使うログ
@@ -272,11 +275,16 @@ struct State {
       TrackNeighborsLog x(k.idx);
       tn.disable(x);
       diff.tnlog.push(x);
-      uf.unite(tn.val[k.idx].first,tn.val[k.idx].second);
+      int a = tn.val[k.idx].first;
+      int b = tn.val[k.idx].second;
+      uf.unite(a,b);
+      if(a!=TARGET&&b!=TARGET) {
+        uf2.unite(a,b);
+      }
       tn.required.insert(k.idx);
-      rq += dist(tn.val[k.idx].first,tn.val[k.idx].second);
-      requireddims.inc(tn.val[k.idx].first);
-      requireddims.inc(tn.val[k.idx].second);
+      rq += dist(a,b);
+      requireddims.inc(a);
+      requireddims.inc(b);
     }
   }
   // 遷移のロールバック
@@ -286,27 +294,25 @@ struct State {
       availabledims.inc(tn.val[k.idx].second);
       tn.rollback(k.tnlog);
     } else {
-      uf.undo();
       tn.rollback(k.tnlog);
       tn.required.erase(k.idx);
-      rq -= dist(tn.val[k.idx].first,tn.val[k.idx].second);
-      requireddims.dec(tn.val[k.idx].first);
-      requireddims.dec(tn.val[k.idx].second);
+      int a = tn.val[k.idx].first;
+      int b = tn.val[k.idx].second;
+      uf.undo();
+      if(a!=TARGET&&b!=TARGET) {
+        uf2.undo();
+      }
+      rq -= dist(a,b);
+      requireddims.dec(a);
+      requireddims.dec(b);
     }
   }
   // どうにかして頂点TARGETにつながる辺を取り除くと最小全域木になるように構築
   // 頂点TARGETにつながる辺を2つとも取り除き、TARGET以外の頂点の最小全域木を構築するようにする
-  // UFは新しく作る
-  // TODO: ufを 書き換える (うまくrequireddims[TARGET]!=2のときにロールバックもする)
-  bool lowerboundv2(StateLog &diff,int now) {
-    UnionFindUndo uf2;
-    int res=0;
-    for(int p: tn.required) {
-      res += dist(tn.val[p].first,tn.val[p].second);
-      if(tn.val[p].first==TARGET) continue;
-      if(tn.val[p].second==TARGET) continue;
-      uf2.unite(tn.val[p].first,tn.val[p].second);
-    }
+  bool lowerboundv2(StateLog &diff) {
+    int res=rq;
+    int now = sz(uf.history);
+    int now2 = sz(uf2.history);
     int rpos=sz(tn.right)-1;
     for(int pos=tn.right[0];pos<rpos;pos=tn.right[pos]) {
       int a =tn.val[pos-1].first;
@@ -348,6 +354,9 @@ struct State {
       while(sz(uf.history)>now) {
         uf.undo();
       }
+      while(sz(uf2.history)>now2) {
+        uf2.undo();
+      }
       lb=INF;
       requireddims.undo();
       return false;
@@ -357,6 +366,9 @@ struct State {
     // 復元
     while(sz(uf.history)>now) {
       uf.undo();
+    }
+    while(sz(uf2.history)>now2) {
+      uf2.undo();
     }
     requireddims.undo();
     return isvalid;
@@ -371,8 +383,10 @@ struct State {
     int dim=requireddims.at(TARGET);
     // 2のとき、0をのぞく頂点の最小全域木を構築
     if(dim==2) {
-      return lowerboundv2(diff,now);
+      return lowerboundv2(diff);
     }
+    // 最小一木の最後につけたす辺
+    int tpos=INF;
     // 0より大きい時、頂点TARGETを端点とする辺は最小全域木につかわない
     // 全て連結されるまで
     int rpos=sz(tn.right)-1;
@@ -386,6 +400,9 @@ struct State {
           diff.tnlog.push(x);
           tn.used.erase(pos-1);
         }
+        if(a==TARGET||b==TARGET) {
+          chmin(tpos,pos);
+        }
         continue;
       }
       if(a==TARGET||b==TARGET) {
@@ -396,6 +413,7 @@ struct State {
             diff.tnlog.push(x);
             tn.used.erase(pos-1);
           }
+          chmin(tpos,pos);
           continue;
         }
         dim++;
@@ -411,20 +429,17 @@ struct State {
         tn.used.insert(pos-1);
       }
     }
-    for(int pos=tn.right[0];pos<rpos&&dim<2;pos=tn.right[pos]) {
-      if(tn.isused[pos]) continue;
-      int a = tn.val[pos-1].first;
-      int b = tn.val[pos-1].second;
-      if(a!=TARGET&&b!=TARGET) continue;
+    if(tpos<INF&&dim<2) {
+      int a = tn.val[tpos-1].first;
+      int b = tn.val[tpos-1].second;
       res += dist(a,b);
       requireddims.inc(a);
       requireddims.inc(b);
       dim++;
-      TrackNeighborsLog x(pos-1);
+      TrackNeighborsLog x(tpos-1);
       tn.toggleFlag(x);
       diff.tnlog.push(x);
-      tn.used.insert(pos-1);
-      break;
+      tn.used.insert(tpos-1);
     }
     if(dim!=2) {
       // 復元
@@ -456,37 +471,47 @@ struct State {
   // この辺を禁止した場合構築できなくなるとき、禁止不可能
   bool canForbidden(int k) {
     int a = tn.val[k].first;
-    if(availabledims.at(a)==2) return false;
     int b = tn.val[k].second;
+    if(availabledims.at(a)==2) return false;
     if(availabledims.at(b)==2) return false;
     return true;
   }
   // この辺が接続する頂点の次数が既に2だったとき、使用不可能
+  // この辺によって巡回路にならない閉路が出来るとき、使用不可能
   bool canUse(int k) {
-    if(requireddims.at(tn.val[k].first)>=2) return false;
-    if(requireddims.at(tn.val[k].second)>=2) return false;
+    int a = tn.val[k].first;
+    int b = tn.val[k].second;
+    if(requireddims.at(a)>=2) return false;
+    if(requireddims.at(b)>=2) return false;
+    if(uf.find(a)==uf.find(b)&&uf.size(a)!=n) return false;
     return true;
   }
   int selectedge() {
-    // 禁止遷移のみ可能な辺を返す
+    // 禁止遷移のみ可能
+    int fpos=-INF;
+    // 使用遷移かつ禁止遷移が可能
+    int avapos=-INF;
+    // 1. 使用遷移のみ可能な辺を返す
+    // 2. 禁止遷移のみ可能な辺を返す
+    // 3. 遷移可能な辺を返す
+    // 各優先順位で複数の辺があった場合最もコストが大きいものを優先する
     for(int pos=tn.left.back();pos>0;pos=tn.left[pos]) {
       if(tn.isused[pos]) continue;
-      if(!canForbidden(pos-1)) continue;
-      if(canUse(pos-1)) continue;
-      return pos-1;
+      bool f = canForbidden(pos-1);
+      bool u = canUse(pos-1);
+      if(!f&&u) {
+        return pos-1;
+      }
+      if(f&&!u) {
+        chmax(fpos,pos-1);
+      }
+      chmax(avapos,pos-1);
     }
-    // 使用遷移のみ可能な辺を返す
-    for(int pos=tn.left.back();pos>0;pos=tn.left[pos]) {
-      if(tn.isused[pos]) continue;
-      if(canForbidden(pos-1)) continue;
-      if(!canUse(pos-1)) continue;
-      return pos-1;
+    if(fpos>=0) {
+      return fpos;
     }
-    // 遷移可能な辺を返す
-    for(int pos=tn.left.back();pos>0;pos=tn.left[pos]) {
-      if(tn.isused[pos]) continue;
-      if(!canForbidden(pos-1)&&!canUse(pos-1)) continue;
-      return pos-1;
+    if(avapos>=0) {
+      return avapos;
     }
     return -INF;
   }
@@ -625,6 +650,7 @@ bool twoopt() {
         flip(i,(i+1)%n,j,(j+1)%n);
         length-=tmp;
         updated=true;
+        break;
       }
     }
   }
