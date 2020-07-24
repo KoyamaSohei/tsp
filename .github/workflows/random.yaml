@@ -1,4 +1,4 @@
-name: eval_random
+name: random
 
 on: [pull_request]
 
