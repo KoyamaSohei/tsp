@@ -78,7 +78,7 @@ struct RMQUndo {
     int rl = _query(a,b,idx*2+2,(l+r)/2,r);
     return min(vl,rl);
   }
-  // min(A[i] | 0 <= i < x)
+  // min(A[i] | 0 <= i < n)
   int query() {
     return _query(0,n,0,0,N);
   }
