@@ -55,7 +55,7 @@ struct RMQ {
 
 int pos[MAX];
 
-// 最遠挿入法で初期解を構築
+// 最近挿入法で初期解を構築
 void build() {
   vector<set<int>> G(n);
   // 巡回路に含まれる頂点集合x,その補集合y
