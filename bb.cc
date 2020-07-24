@@ -385,6 +385,8 @@ struct State {
     if(dim==2) {
       return lowerboundv2(diff);
     }
+    // 最小一木の最後につけたす辺
+    int tpos=INF;
     // 0より大きい時、頂点TARGETを端点とする辺は最小全域木につかわない
     // 全て連結されるまで
     int rpos=sz(tn.right)-1;
@@ -398,6 +400,9 @@ struct State {
           diff.tnlog.push(x);
           tn.used.erase(pos-1);
         }
+        if(a==TARGET||b==TARGET) {
+          chmin(tpos,pos);
+        }
         continue;
       }
       if(a==TARGET||b==TARGET) {
@@ -408,6 +413,7 @@ struct State {
             diff.tnlog.push(x);
             tn.used.erase(pos-1);
           }
+          chmin(tpos,pos);
           continue;
         }
         dim++;
@@ -423,20 +429,17 @@ struct State {
         tn.used.insert(pos-1);
       }
     }
-    for(int pos=tn.right[0];pos<rpos&&dim<2;pos=tn.right[pos]) {
-      if(tn.isused[pos]) continue;
-      int a = tn.val[pos-1].first;
-      int b = tn.val[pos-1].second;
-      if(a!=TARGET&&b!=TARGET) continue;
+    if(tpos<INF&&dim<2) {
+      int a = tn.val[tpos-1].first;
+      int b = tn.val[tpos-1].second;
       res += dist(a,b);
       requireddims.inc(a);
       requireddims.inc(b);
       dim++;
-      TrackNeighborsLog x(pos-1);
+      TrackNeighborsLog x(tpos-1);
       tn.toggleFlag(x);
       diff.tnlog.push(x);
-      tn.used.insert(pos-1);
-      break;
+      tn.used.insert(tpos-1);
     }
     if(dim!=2) {
       // 復元
