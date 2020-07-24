@@ -1,0 +1,30 @@
+name: random
+
+on: [pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.ref }}
+    - name: Update dist
+      run: |
+        sudo apt install libboost-dev
+        g++ util/export.cc -o export.out 
+        bash ./random/eval.sh
+    - name: Commit files
+      run: |
+        git config --local user.email "koyamaso0309@gmail.com"
+        git config --local user.name "KoyamaSohei"
+        git add .
+        git commit -m "update: dist(random)"
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ github.event.pull_request.head.ref }}
+        force: true
