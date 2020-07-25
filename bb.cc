@@ -736,8 +736,8 @@ void setParam() {
   }
   delta = exp(log(tmin/tmax)/tsteps);
   cerr << delta << endl;
-  memcpy(init_tour,tour, sizeof(tour));
-  init_length=length;
+  memcpy(tour,init_tour, sizeof(init_tour));
+  length=init_length;
 }
 
 void sa() {

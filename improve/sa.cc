@@ -134,9 +134,9 @@ void setParam() {
   }
   delta = exp(log(tmin/tmax)/tsteps);
   cerr << delta << endl;
-  memcpy(init_tour,tour, sizeof(tour));
-  memcpy(init_pos,pos, sizeof(pos));
-  init_length=length;
+  memcpy(tour,init_tour, sizeof(init_tour));
+  memcpy(pos,init_pos, sizeof(init_pos));
+  length = init_length;
 }
 
 void sa() {
