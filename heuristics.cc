@@ -13,7 +13,7 @@ int tspSolver() {
   auto b = clock();
   run();
   auto c = clock();
-  cerr << "build duration "   << (b-a) << endl;
+  cerr << "build time "   << (b-a) << endl;
   cerr << "improve time " << (c-b) << endl;
   return 1;
 }
