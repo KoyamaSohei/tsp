@@ -72,6 +72,7 @@ void tabu() {
     lifetime[pi]=TL;
     lifetime[(pi+1)%n]=TL;
     flip(i,(i+1)%n,pi,(pi+1)%n);
+    length -= score;
   }
 }
 
