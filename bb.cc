@@ -655,90 +655,10 @@ bool moveNext(int tmp,double t) {
 }
 
 
-double tmax = 500.0;
+double tmax = 687169.7812130214;
 double tmin = 1e-5;
-double delta = 0.1;
-const double maxrate = 0.98;
-const int steps = 100000;
-const int tsteps = 60;
-
-int init_tour[MAX];
-int init_pos[MAX];
-int init_length;
-
-// 温度tで何回2-optでswapされる回数/step数を返す
-double exec(double t) {
-  memcpy(tour,init_tour, sizeof(init_tour));
-  length=init_length;
-  int imp=0;
-  for(int i=0,cnt=0;cnt<steps;i=(i+1)%n) {
-    int a = tour[i];
-    int b = tour[(i+1)%n];
-    rep(k,n) {
-      int c = tour[k];
-      if(b==c) continue;
-      if(cnt>=steps) break;
-      int d = tour[(k+1)%n];
-      if(b==d||a==d) continue;
-      cnt++;
-      int tmp = dist(a,b)+dist(c,d)-dist(a,c)-dist(b,d);
-      if(tmp>0) {
-        flip(i,(i+1)%n,k,(k+1)%n);
-        length-=tmp;
-        imp++;
-        break;
-      }
-      if(!moveNext(tmp,t)) {
-        continue;
-      }
-      flip(i,(i+1)%n,k,(k+1)%n);
-      length-=tmp;
-      imp++;
-      break;
-    }
-  }
-  return double(imp)/steps;
-}
-
-void setParam() {
-  // 最適なTmax,Tminを調べる
-  memcpy(init_tour,tour, sizeof(tour));
-  init_length=length;
-  {
-    // find Tmax
-    double lt=0,rt=INF;
-    rep(tryi,30) {
-      double m = (lt+rt)/2;
-      double rate = exec(m);
-      if(rate<maxrate) {
-        lt=m;
-      } else {
-        rt=m;
-      }
-    }
-    cerr << lt << endl;
-    tmax=lt;
-  }
-  {
-    // find Tmin
-    double lt=1e-5,rt=tmax;
-    rep(tryi,10) {
-      double m = (lt+rt)/2;
-      double rate = exec(m);
-      if(rate<0) {
-        lt=m;
-      } else {
-        rt=m;
-      }
-    }
-    cerr << lt << endl;
-    tmin=lt;
-  }
-  delta = exp(log(tmin/tmax)/tsteps);
-  cerr << delta << endl;
-  memcpy(tour,init_tour, sizeof(init_tour));
-  length=init_length;
-}
+double delta = 0.9797395699415721;
+const int steps = 500;
 
 void sa() {
   for(double t=tmax;t>tmin;t*=delta) {
@@ -851,7 +771,6 @@ void buildFI() {
 void setupperbound() {
   buildFI();
   snapshot();
-  setParam();
   sa();
   length = bestlen;
   rep(i,n) {
@@ -890,6 +809,20 @@ State build() {
 
 int tspSolver() {
   State state = build();
+  if(DEBUG) { // for training
+    char *tma = getenv("TMAX");
+    if(tma != NULL) {
+      tmax = stod(tma);
+    }
+    char *del = getenv("DELTA");
+    if(del != NULL) {
+      delta = stod(del);
+    }
+    cerr << tmax << " " << delta << endl;
+    setupperbound(); 
+    cout << length << endl;
+    return 1;
+  }
   setupperbound(); 
   cerr << "init length = " << length << endl;
   while(!state.log.empty()) {
